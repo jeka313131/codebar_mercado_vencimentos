@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="UTF-8" />
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"
+    />
+    <meta name="theme-color" content="#0d9488" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <link rel="apple-touch-icon" href="/pwa-192.png" />
+    <title>Mercado Giro Rápido</title>
+  </head>
+  <body>
+    <div id="app">
+      <header class="header">
+        <h1>Giro Rápido</h1>
+        <p class="subtitle">Teste — cadastro rápido</p>
+      </header>
+
+      <main class="form-card">
+        <div class="field">
+          <label for="barcode">Código de barras</label>
+          <div class="barcode-row">
+            <input
+              id="barcode"
+              type="text"
+              inputmode="numeric"
+              placeholder="Escaneie ou digite"
+              autocomplete="off"
+            />
+            <button type="button" id="btn-scan" class="btn btn-scan" aria-label="Ler código de barras">
+              📷 Ler
+            </button>
+          </div>
+        </div>
+
+        <div class="field">
+          <label for="product-name">Nome do produto</label>
+          <input
+            id="product-name"
+            type="text"
+            placeholder="Ex.: Iogurte natural 170g"
+            autocomplete="off"
+          />
+        </div>
+
+        <div class="field">
+          <span class="field-label">Data de vencimento</span>
+          <div class="date-picker-wrap">
+            <div id="expiry-display" class="date-picker-display is-empty">
+              Toque para escolher a data
+            </div>
+            <input
+              id="expiry-date"
+              type="date"
+              class="date-input-native"
+              aria-label="Data de vencimento"
+            />
+          </div>
+        </div>
+
+        <button type="button" id="btn-save" class="btn btn-primary">
+          Salvar (teste)
+        </button>
+
+        <p id="feedback" class="feedback" hidden></p>
+      </main>
+
+      <section id="recent-list" class="recent-list" hidden>
+        <h2>Últimos cadastros (teste)</h2>
+        <ul id="recent-items"></ul>
+      </section>
+    </div>
+
+    <section id="scanner-panel" class="scanner-panel" aria-hidden="true">
+      <div class="scanner-header">
+        <h2>Aponte para o código</h2>
+        <button type="button" id="btn-close-scanner" class="btn btn-ghost">
+          Fechar
+        </button>
+      </div>
+      <p id="scanner-status" class="scanner-status">Iniciando câmera…</p>
+      <div class="scanner-viewport">
+        <video
+          id="camera-video"
+          playsinline
+          webkit-playsinline
+          muted
+          autoplay
+        ></video>
+        <div class="scan-frame" aria-hidden="true"></div>
+      </div>
+    </section>
+
+    <script type="module" src="/src/main.js"></script>
+  </body>
+</html>
