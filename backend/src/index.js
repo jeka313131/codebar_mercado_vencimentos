@@ -36,3 +36,5 @@ app.use("/api/products", productsRouter);
 app.listen(PORT, "0.0.0.0", () => {
   console.log(`Backend rodando na porta ${PORT}`);
 });
+
+// faça dar certo
