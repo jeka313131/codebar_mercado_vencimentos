@@ -10,17 +10,22 @@ CREATE TABLE IF NOT EXISTS public.products (
   barcode TEXT NOT NULL,
   name TEXT NOT NULL,
   expiry_date DATE NOT NULL,
+  quantity INTEGER NOT NULL DEFAULT 1,
+  image_url TEXT,
   created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
   updated_at TIMESTAMPTZ NOT NULL DEFAULT now(),
 
   CONSTRAINT products_barcode_not_empty CHECK (char_length(trim(barcode)) > 0),
-  CONSTRAINT products_name_not_empty CHECK (char_length(trim(name)) > 0)
+  CONSTRAINT products_name_not_empty CHECK (char_length(trim(name)) > 0),
+  CONSTRAINT products_quantity_positive CHECK (quantity > 0)
 );
 
 COMMENT ON TABLE public.products IS 'Produtos com validade curta cadastrados no mercado';
 COMMENT ON COLUMN public.products.barcode IS 'Código de barras EAN/UPC';
 COMMENT ON COLUMN public.products.name IS 'Nome do produto';
 COMMENT ON COLUMN public.products.expiry_date IS 'Data de vencimento';
+COMMENT ON COLUMN public.products.quantity IS 'Quantidade em estoque com essa validade';
+COMMENT ON COLUMN public.products.image_url IS 'URL pública da foto no Supabase Storage';
 
 CREATE INDEX IF NOT EXISTS idx_products_expiry_date
   ON public.products (expiry_date);
@@ -117,12 +122,41 @@ CREATE POLICY "alert_logs_insert_all"
   WITH CHECK (true);
 
 -- View útil: produtos que vencem em X dias (para alertas futuros)
-CREATE OR REPLACE VIEW public.products_expiring_soon AS
+CREATE VIEW public.products_expiring_soon AS
 SELECT
-  p.*,
+  p.id,
+  p.barcode,
+  p.name,
+  p.expiry_date,
+  p.quantity,
+  p.image_url,
+  p.created_at,
+  p.updated_at,
   (p.expiry_date - CURRENT_DATE) AS days_until_expiry
 FROM public.products p
 WHERE p.expiry_date >= CURRENT_DATE
 ORDER BY p.expiry_date ASC;
 
 COMMENT ON VIEW public.products_expiring_soon IS 'Produtos ainda não vencidos, ordenados por vencimento';
+
+-- Bucket para fotos (instalação nova)
+INSERT INTO storage.buckets (id, name, public, file_size_limit, allowed_mime_types)
+VALUES (
+  'product-images',
+  'product-images',
+  true,
+  5242880,
+  ARRAY['image/jpeg', 'image/png', 'image/webp', 'image/gif']
+)
+ON CONFLICT (id) DO NOTHING;
+
+DROP POLICY IF EXISTS "product_images_select" ON storage.objects;
+DROP POLICY IF EXISTS "product_images_insert" ON storage.objects;
+
+CREATE POLICY "product_images_select"
+  ON storage.objects FOR SELECT TO anon, authenticated
+  USING (bucket_id = 'product-images');
+
+CREATE POLICY "product_images_insert"
+  ON storage.objects FOR INSERT TO anon, authenticated
+  WITH CHECK (bucket_id = 'product-images');

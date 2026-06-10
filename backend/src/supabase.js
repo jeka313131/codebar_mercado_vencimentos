@@ -26,6 +26,8 @@ export function mapProduct(row) {
     barcode: row.barcode,
     name: row.name,
     expiryDate: row.expiry_date,
+    quantity: row.quantity ?? 1,
+    imageUrl: row.image_url ?? null,
     createdAt: row.created_at,
   };
 }

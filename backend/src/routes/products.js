@@ -13,7 +13,7 @@ router.get("/", async (_req, res) => {
 });
 
 router.post("/", async (req, res) => {
-  const { barcode, name, expiryDate } = req.body ?? {};
+  const { barcode, name, expiryDate, quantity, imageUrl } = req.body ?? {};
 
   if (!barcode?.trim() || !name?.trim() || !expiryDate) {
     return res.status(400).json({
@@ -22,7 +22,13 @@ router.post("/", async (req, res) => {
   }
 
   try {
-    const product = await addProduct({ barcode, name, expiryDate });
+    const product = await addProduct({
+      barcode,
+      name,
+      expiryDate,
+      quantity,
+      imageUrl,
+    });
     res.status(201).json(product);
   } catch (error) {
     res.status(500).json({ error: error.message });
