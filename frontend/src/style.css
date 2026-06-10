@@ -261,7 +261,7 @@ body.scanner-open {
 
 .scanner-panel.is-ready .scanner-status {
   top: auto;
-  bottom: calc(10.5rem + env(safe-area-inset-bottom));
+  bottom: calc(7.5rem + env(safe-area-inset-bottom));
   transform: translateX(-50%);
   font-size: 0.82rem;
   color: #cbd5e1;
@@ -302,35 +302,6 @@ body.scanner-open {
   box-shadow:
     0 0 0 9999px rgba(0, 0, 0, 0.45),
     0 0 18px rgba(74, 222, 128, 0.75);
-}
-
-.scanner-shutter {
-  position: absolute;
-  left: 50%;
-  bottom: calc(5.5rem + env(safe-area-inset-bottom));
-  z-index: 4;
-  transform: translateX(-50%);
-  min-width: 148px;
-  padding: 0.85rem 1.5rem;
-  border: 3px solid rgba(255, 255, 255, 0.9);
-  border-radius: 999px;
-  background: rgba(13, 148, 136, 0.92);
-  color: #fff;
-  font-size: 1rem;
-  font-weight: 700;
-  letter-spacing: 0.02em;
-  cursor: pointer;
-  touch-action: manipulation;
-  box-shadow: 0 4px 18px rgba(0, 0, 0, 0.35);
-}
-
-.scanner-shutter:disabled {
-  opacity: 0.55;
-  cursor: not-allowed;
-}
-
-.scanner-shutter:not(:disabled):active {
-  background: rgba(20, 184, 166, 0.95);
 }
 
 .scanner-controls {

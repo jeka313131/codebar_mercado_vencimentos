@@ -1,15 +1,8 @@
 import "./style.css";
+import { BrowserMultiFormatReader } from "@zxing/browser";
+import { BarcodeFormat, DecodeHintType } from "@zxing/library";
 import { registerSW } from "virtual:pwa-register";
 import { fetchProducts, saveProduct } from "./api.js";
-import { captureAndDecode } from "./scanner/capture.js";
-import {
-  applyCameraEnhancements,
-  getTorchCapabilities,
-  setTorch,
-  startCamera,
-  stopCamera,
-} from "./scanner/camera.js";
-import { resetDecoder } from "./scanner/decode.js";
 
 registerSW({ immediate: true });
 
@@ -20,7 +13,6 @@ const expiryDisplay = document.getElementById("expiry-display");
 const btnSave = document.getElementById("btn-save");
 const btnScan = document.getElementById("btn-scan");
 const btnCancelScanner = document.getElementById("btn-cancel-scanner");
-const btnCaptureScanner = document.getElementById("btn-capture-scanner");
 const btnTypeBarcode = document.getElementById("btn-type-barcode");
 const btnTorch = document.getElementById("btn-torch");
 const feedback = document.getElementById("feedback");
@@ -30,12 +22,32 @@ const scannerPanel = document.getElementById("scanner-panel");
 const scannerStatus = document.getElementById("scanner-status");
 const scanFrame = document.getElementById("scan-frame");
 const cameraVideo = document.getElementById("camera-video");
-const scanCanvas = document.getElementById("scan-canvas");
 
+const scanHints = new Map();
+scanHints.set(DecodeHintType.POSSIBLE_FORMATS, [
+  BarcodeFormat.EAN_13,
+  BarcodeFormat.EAN_8,
+  BarcodeFormat.UPC_A,
+  BarcodeFormat.UPC_E,
+]);
+scanHints.set(DecodeHintType.TRY_HARDER, true);
+
+const reader = new BrowserMultiFormatReader(scanHints, 300);
 let scanning = false;
+let scanControls = null;
 let torchOn = false;
 let torchSupported = false;
 let lastScannedCode = "";
+
+const cameraConstraints = {
+  video: {
+    facingMode: { ideal: "environment" },
+    width: { min: 1280, ideal: 1920, max: 4096 },
+    height: { min: 720, ideal: 1080, max: 2160 },
+    aspectRatio: { ideal: 1.7777777778 },
+    focusMode: { ideal: "continuous" },
+  },
+};
 
 function showFeedback(message, type = "success") {
   feedback.textContent = message;
@@ -107,21 +119,13 @@ function playScanBeep() {
     oscillator.stop(context.currentTime + 0.1);
     oscillator.onended = () => context.close();
   } catch {
-    // ignore
+    // ignore if audio blocked
   }
-}
-
-function vibrateSuccess() {
-  navigator.vibrate?.(80);
 }
 
 function flashScanSuccess() {
   scanFrame.classList.add("is-success");
   window.setTimeout(() => scanFrame.classList.remove("is-success"), 450);
-}
-
-function setCaptureEnabled(enabled) {
-  btnCaptureScanner.disabled = !enabled;
 }
 
 function resetScannerUi() {
@@ -135,30 +139,75 @@ function resetScannerUi() {
   btnTorch.classList.remove("is-on");
   btnTorch.setAttribute("aria-pressed", "false");
   btnTorch.setAttribute("aria-label", "Ligar lanterna");
-  setCaptureEnabled(false);
+}
+
+function getVideoTrack() {
+  return cameraVideo.srcObject?.getVideoTracks?.()?.[0] ?? null;
+}
+
+async function applyCameraEnhancements() {
+  const track = getVideoTrack();
+  if (!track) return;
+
+  const capabilities = track.getCapabilities?.() ?? {};
+  const advanced = [];
+
+  if (capabilities.focusMode?.includes?.("continuous")) {
+    advanced.push({ focusMode: "continuous" });
+  }
+
+  if (capabilities.exposureMode?.includes?.("continuous")) {
+    advanced.push({ exposureMode: "continuous" });
+  }
+
+  if (capabilities.whiteBalanceMode?.includes?.("continuous")) {
+    advanced.push({ whiteBalanceMode: "continuous" });
+  }
+
+  if (capabilities.zoom?.max > 1) {
+    const zoom = Math.min(1.4, capabilities.zoom.max);
+    advanced.push({ zoom });
+  }
+
+  if (!advanced.length) return;
+
+  try {
+    await track.applyConstraints({ advanced });
+  } catch {
+    // some devices reject advanced constraints
+  }
 }
 
 function updateTorchAvailability() {
-  const { supported } = getTorchCapabilities(cameraVideo);
-  torchSupported = supported;
-  btnTorch.hidden = !torchSupported;
-}
-
-async function toggleTorch() {
-  if (!torchSupported) return;
-
-  const next = !torchOn;
-  const ok = await setTorch(cameraVideo, next);
-  if (!ok) {
+  const track = getVideoTrack();
+  if (!track) {
     btnTorch.hidden = true;
-    torchSupported = false;
     return;
   }
 
-  torchOn = next;
-  btnTorch.classList.toggle("is-on", next);
-  btnTorch.setAttribute("aria-pressed", String(next));
-  btnTorch.setAttribute("aria-label", next ? "Desligar lanterna" : "Ligar lanterna");
+  const capabilities = track.getCapabilities?.() ?? {};
+  torchSupported = Boolean(capabilities.torch);
+  btnTorch.hidden = !torchSupported;
+}
+
+async function setTorch(enabled) {
+  const track = getVideoTrack();
+  if (!track || !torchSupported) return;
+
+  try {
+    await track.applyConstraints({ advanced: [{ torch: enabled }] });
+    torchOn = enabled;
+    btnTorch.classList.toggle("is-on", enabled);
+    btnTorch.setAttribute("aria-pressed", String(enabled));
+    btnTorch.setAttribute("aria-label", enabled ? "Desligar lanterna" : "Ligar lanterna");
+  } catch {
+    btnTorch.hidden = true;
+    torchSupported = false;
+  }
+}
+
+async function toggleTorch() {
+  await setTorch(!torchOn);
 }
 
 function getCameraErrorMessage(error) {
@@ -187,7 +236,6 @@ function handleScanResult(text) {
   barcodeInput.value = code;
   flashScanSuccess();
   playScanBeep();
-  vibrateSuccess();
 
   window.setTimeout(async () => {
     await stopScanner();
@@ -200,46 +248,38 @@ async function stopScanner() {
 
   try {
     if (torchOn) {
-      await setTorch(cameraVideo, false);
+      await setTorch(false);
     }
-    resetDecoder();
+
+    if (scanControls) {
+      scanControls.stop();
+      scanControls = null;
+    }
+
+    reader.reset();
   } catch (error) {
     console.debug(error);
   }
 
-  stopCamera(cameraVideo);
   scannerPanel.classList.remove("is-open");
   scannerPanel.setAttribute("aria-hidden", "true");
   document.body.classList.remove("scanner-open");
   resetScannerUi();
+
+  if (cameraVideo.srcObject) {
+    cameraVideo.srcObject.getTracks().forEach((track) => track.stop());
+    cameraVideo.srcObject = null;
+  }
+
+  cameraVideo.removeAttribute("src");
+  cameraVideo.load();
+
   window.scrollTo(0, 0);
 }
 
 async function handleTypeBarcode() {
   await stopScanner();
   barcodeInput.focus();
-}
-
-async function handleCapture() {
-  if (!scanning || btnCaptureScanner.disabled) return;
-
-  setCaptureEnabled(false);
-  scannerStatus.textContent = "Lendo código…";
-
-  try {
-    const code = await captureAndDecode(cameraVideo, scanFrame, scanCanvas);
-
-    if (code) {
-      handleScanResult(code);
-      return;
-    }
-
-    scannerStatus.textContent = "Não leu. Aproxime, ilumine e toque Capturar de novo.";
-  } catch {
-    scannerStatus.textContent = "Erro ao capturar. Tente novamente.";
-  }
-
-  setCaptureEnabled(true);
 }
 
 async function waitForPanelPaint() {
@@ -269,14 +309,26 @@ async function startScanner() {
   }
 
   try {
-    await startCamera(cameraVideo);
+    scanControls = await reader.decodeFromConstraints(
+      cameraConstraints,
+      cameraVideo,
+      (result, error) => {
+        if (result) {
+          handleScanResult(result.getText());
+        }
+
+        if (error && error.name !== "NotFoundException") {
+          console.debug(error);
+        }
+      },
+    );
+
     scannerPanel.classList.add("is-ready");
-    scannerStatus.textContent = "Centralize o código e toque Capturar";
+    scannerStatus.textContent = "Centralize o código no quadro branco";
 
     const onCameraReady = async () => {
-      await applyCameraEnhancements(cameraVideo);
+      await applyCameraEnhancements();
       updateTorchAvailability();
-      setCaptureEnabled(true);
     };
 
     cameraVideo.addEventListener("loadedmetadata", onCameraReady, { once: true });
@@ -322,7 +374,6 @@ async function handleSave() {
 
 btnScan.addEventListener("click", startScanner);
 btnCancelScanner.addEventListener("click", stopScanner);
-btnCaptureScanner.addEventListener("click", handleCapture);
 btnTypeBarcode.addEventListener("click", handleTypeBarcode);
 btnTorch.addEventListener("click", toggleTorch);
 btnSave.addEventListener("click", handleSave);
