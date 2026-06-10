@@ -1,5 +1,6 @@
 import "./style.css";
 import { BrowserMultiFormatReader } from "@zxing/browser";
+import { BarcodeFormat, DecodeHintType } from "@zxing/library";
 import { registerSW } from "virtual:pwa-register";
 import { fetchProducts, saveProduct } from "./api.js";
 
@@ -12,19 +13,41 @@ const expiryDisplay = document.getElementById("expiry-display");
 const btnSave = document.getElementById("btn-save");
 const btnScan = document.getElementById("btn-scan");
 const btnCancelScanner = document.getElementById("btn-cancel-scanner");
+const btnTypeBarcode = document.getElementById("btn-type-barcode");
 const btnTorch = document.getElementById("btn-torch");
 const feedback = document.getElementById("feedback");
 const recentList = document.getElementById("recent-list");
 const recentItems = document.getElementById("recent-items");
 const scannerPanel = document.getElementById("scanner-panel");
 const scannerStatus = document.getElementById("scanner-status");
+const scanFrame = document.getElementById("scan-frame");
 const cameraVideo = document.getElementById("camera-video");
 
-const reader = new BrowserMultiFormatReader();
+const scanHints = new Map();
+scanHints.set(DecodeHintType.POSSIBLE_FORMATS, [
+  BarcodeFormat.EAN_13,
+  BarcodeFormat.EAN_8,
+  BarcodeFormat.UPC_A,
+  BarcodeFormat.UPC_E,
+]);
+scanHints.set(DecodeHintType.TRY_HARDER, true);
+
+const reader = new BrowserMultiFormatReader(scanHints, 300);
 let scanning = false;
 let scanControls = null;
 let torchOn = false;
 let torchSupported = false;
+let lastScannedCode = "";
+
+const cameraConstraints = {
+  video: {
+    facingMode: { ideal: "environment" },
+    width: { min: 1280, ideal: 1920, max: 4096 },
+    height: { min: 720, ideal: 1080, max: 2160 },
+    aspectRatio: { ideal: 1.7777777778 },
+    focusMode: { ideal: "continuous" },
+  },
+};
 
 function showFeedback(message, type = "success") {
   feedback.textContent = message;
@@ -81,10 +104,35 @@ async function loadRecent() {
   }
 }
 
+function playScanBeep() {
+  try {
+    const context = new AudioContext();
+    const oscillator = context.createOscillator();
+    const gain = context.createGain();
+
+    oscillator.type = "sine";
+    oscillator.frequency.value = 920;
+    gain.gain.value = 0.12;
+    oscillator.connect(gain);
+    gain.connect(context.destination);
+    oscillator.start();
+    oscillator.stop(context.currentTime + 0.1);
+    oscillator.onended = () => context.close();
+  } catch {
+    // ignore if audio blocked
+  }
+}
+
+function flashScanSuccess() {
+  scanFrame.classList.add("is-success");
+  window.setTimeout(() => scanFrame.classList.remove("is-success"), 450);
+}
+
 function resetScannerUi() {
   scannerStatus.textContent = "Iniciando câmera…";
   scannerStatus.classList.remove("is-error");
   scannerPanel.classList.remove("is-ready");
+  scanFrame.classList.remove("is-success");
   torchOn = false;
   torchSupported = false;
   btnTorch.hidden = true;
@@ -95,6 +143,39 @@ function resetScannerUi() {
 
 function getVideoTrack() {
   return cameraVideo.srcObject?.getVideoTracks?.()?.[0] ?? null;
+}
+
+async function applyCameraEnhancements() {
+  const track = getVideoTrack();
+  if (!track) return;
+
+  const capabilities = track.getCapabilities?.() ?? {};
+  const advanced = [];
+
+  if (capabilities.focusMode?.includes?.("continuous")) {
+    advanced.push({ focusMode: "continuous" });
+  }
+
+  if (capabilities.exposureMode?.includes?.("continuous")) {
+    advanced.push({ exposureMode: "continuous" });
+  }
+
+  if (capabilities.whiteBalanceMode?.includes?.("continuous")) {
+    advanced.push({ whiteBalanceMode: "continuous" });
+  }
+
+  if (capabilities.zoom?.max > 1) {
+    const zoom = Math.min(1.4, capabilities.zoom.max);
+    advanced.push({ zoom });
+  }
+
+  if (!advanced.length) return;
+
+  try {
+    await track.applyConstraints({ advanced });
+  } catch {
+    // some devices reject advanced constraints
+  }
 }
 
 function updateTorchAvailability() {
@@ -147,19 +228,39 @@ function getCameraErrorMessage(error) {
   return error?.message || "Não foi possível abrir a câmera.";
 }
 
+function handleScanResult(text) {
+  const code = text.trim();
+  if (!code || code === lastScannedCode) return;
+
+  lastScannedCode = code;
+  barcodeInput.value = code;
+  flashScanSuccess();
+  playScanBeep();
+
+  window.setTimeout(async () => {
+    await stopScanner();
+    productNameInput.focus();
+  }, 180);
+}
+
 async function stopScanner() {
   scanning = false;
 
-  if (torchOn) {
-    await setTorch(false);
+  try {
+    if (torchOn) {
+      await setTorch(false);
+    }
+
+    if (scanControls) {
+      scanControls.stop();
+      scanControls = null;
+    }
+
+    reader.reset();
+  } catch (error) {
+    console.debug(error);
   }
 
-  if (scanControls) {
-    scanControls.stop();
-    scanControls = null;
-  }
-
-  reader.reset();
   scannerPanel.classList.remove("is-open");
   scannerPanel.setAttribute("aria-hidden", "true");
   document.body.classList.remove("scanner-open");
@@ -169,6 +270,16 @@ async function stopScanner() {
     cameraVideo.srcObject.getTracks().forEach((track) => track.stop());
     cameraVideo.srcObject = null;
   }
+
+  cameraVideo.removeAttribute("src");
+  cameraVideo.load();
+
+  window.scrollTo(0, 0);
+}
+
+async function handleTypeBarcode() {
+  await stopScanner();
+  barcodeInput.focus();
 }
 
 async function waitForPanelPaint() {
@@ -181,6 +292,7 @@ async function startScanner() {
   if (scanning) return;
 
   scanning = true;
+  lastScannedCode = "";
   resetScannerUi();
   scannerPanel.classList.add("is-open");
   scannerPanel.setAttribute("aria-hidden", "false");
@@ -198,19 +310,11 @@ async function startScanner() {
 
   try {
     scanControls = await reader.decodeFromConstraints(
-      {
-        video: {
-          facingMode: { ideal: "environment" },
-          width: { ideal: 1280 },
-          height: { ideal: 720 },
-        },
-      },
+      cameraConstraints,
       cameraVideo,
       (result, error) => {
         if (result) {
-          barcodeInput.value = result.getText();
-          stopScanner();
-          productNameInput.focus();
+          handleScanResult(result.getText());
         }
 
         if (error && error.name !== "NotFoundException") {
@@ -220,8 +324,17 @@ async function startScanner() {
     );
 
     scannerPanel.classList.add("is-ready");
-    cameraVideo.addEventListener("loadedmetadata", updateTorchAvailability, { once: true });
-    updateTorchAvailability();
+    scannerStatus.textContent = "Centralize o código no quadro branco";
+
+    const onCameraReady = async () => {
+      await applyCameraEnhancements();
+      updateTorchAvailability();
+    };
+
+    cameraVideo.addEventListener("loadedmetadata", onCameraReady, { once: true });
+    if (cameraVideo.readyState >= 1) {
+      await onCameraReady();
+    }
   } catch (error) {
     scannerStatus.textContent = getCameraErrorMessage(error);
     scannerStatus.classList.add("is-error");
@@ -261,6 +374,7 @@ async function handleSave() {
 
 btnScan.addEventListener("click", startScanner);
 btnCancelScanner.addEventListener("click", stopScanner);
+btnTypeBarcode.addEventListener("click", handleTypeBarcode);
 btnTorch.addEventListener("click", toggleTorch);
 btnSave.addEventListener("click", handleSave);
 expiryDateInput.addEventListener("change", updateExpiryDisplay);

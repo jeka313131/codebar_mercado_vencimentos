@@ -4,7 +4,7 @@ import productsRouter from "./routes/products.js";
 
 const app = express();
 const PORT = Number(process.env.PORT) || 3000;
-const FRONTEND_URL = process.env.FRONTEND_URL || "http://localhost:8080";
+const FRONTEND_URL = process.env.FRONTEND_URL || "http://localhost:5173";
 const allowedOrigins = FRONTEND_URL.split(",").map((url) => url.trim());
 
 app.use(

@@ -88,7 +88,7 @@
           muted
           autoplay
         ></video>
-        <div class="scan-frame" aria-hidden="true"></div>
+        <div class="scan-frame" id="scan-frame" aria-hidden="true"></div>
         <div class="scanner-controls">
           <button
             type="button"
@@ -97,6 +97,13 @@
             aria-label="Cancelar leitura"
           >
             ✕
+          </button>
+          <button
+            type="button"
+            id="btn-type-barcode"
+            class="scanner-btn-type"
+          >
+            Digitar código
           </button>
           <button
             type="button"

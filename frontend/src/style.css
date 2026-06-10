@@ -212,18 +212,14 @@ body.scanner-open {
   position: fixed;
   inset: 0;
   z-index: 1000;
+  display: none;
   width: 100vw;
   height: 100dvh;
   background: #000;
-  visibility: hidden;
-  opacity: 0;
-  pointer-events: none;
 }
 
 .scanner-panel.is-open {
-  visibility: visible;
-  opacity: 1;
-  pointer-events: auto;
+  display: block;
 }
 
 .scanner-header {
@@ -264,7 +260,12 @@ body.scanner-open {
 }
 
 .scanner-panel.is-ready .scanner-status {
-  display: none;
+  top: auto;
+  bottom: calc(7.5rem + env(safe-area-inset-bottom));
+  transform: translateX(-50%);
+  font-size: 0.82rem;
+  color: #cbd5e1;
+  background: rgba(0, 0, 0, 0.55);
 }
 
 .scanner-viewport {
@@ -286,13 +287,21 @@ body.scanner-open {
   position: absolute;
   top: 50%;
   left: 50%;
-  width: min(85vw, 320px);
-  height: 120px;
+  width: min(90vw, 340px);
+  height: 140px;
   transform: translate(-50%, -50%);
   border: 2px solid rgba(255, 255, 255, 0.85);
   border-radius: 8px;
   box-shadow: 0 0 0 9999px rgba(0, 0, 0, 0.45);
   pointer-events: none;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.scan-frame.is-success {
+  border-color: #4ade80;
+  box-shadow:
+    0 0 0 9999px rgba(0, 0, 0, 0.45),
+    0 0 18px rgba(74, 222, 128, 0.75);
 }
 
 .scanner-controls {
@@ -301,10 +310,11 @@ body.scanner-open {
   bottom: 0;
   left: 0;
   z-index: 4;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 1.25rem 1.5rem;
+  display: grid;
+  grid-template-columns: 56px 1fr 56px;
+  align-items: end;
+  gap: 0.5rem;
+  padding: 1.25rem 1rem;
   padding-bottom: max(1.25rem, env(safe-area-inset-bottom));
   pointer-events: none;
 }
@@ -352,6 +362,37 @@ body.scanner-open {
 
 .scanner-fab--torch:active {
   opacity: 0.85;
+}
+
+.scanner-btn-type {
+  justify-self: center;
+  min-width: 0;
+  max-width: 100%;
+  padding: 0.65rem 0.85rem;
+  border: 1px solid rgba(255, 255, 255, 0.35);
+  border-radius: 999px;
+  background: rgba(15, 23, 42, 0.82);
+  color: #f8fafc;
+  font-size: 0.82rem;
+  font-weight: 600;
+  line-height: 1.2;
+  white-space: nowrap;
+  cursor: pointer;
+  touch-action: manipulation;
+  pointer-events: auto;
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.35);
+}
+
+.scanner-btn-type:active {
+  background: rgba(30, 41, 59, 0.95);
+}
+
+.scanner-fab--torch {
+  justify-self: end;
+}
+
+.scanner-fab--cancel {
+  justify-self: start;
 }
 
 .recent-list {
