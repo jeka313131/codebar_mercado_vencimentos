@@ -11,7 +11,8 @@ const expiryDateInput = document.getElementById("expiry-date");
 const expiryDisplay = document.getElementById("expiry-display");
 const btnSave = document.getElementById("btn-save");
 const btnScan = document.getElementById("btn-scan");
-const btnCloseScanner = document.getElementById("btn-close-scanner");
+const btnCancelScanner = document.getElementById("btn-cancel-scanner");
+const btnTorch = document.getElementById("btn-torch");
 const feedback = document.getElementById("feedback");
 const recentList = document.getElementById("recent-list");
 const recentItems = document.getElementById("recent-items");
@@ -22,6 +23,8 @@ const cameraVideo = document.getElementById("camera-video");
 const reader = new BrowserMultiFormatReader();
 let scanning = false;
 let scanControls = null;
+let torchOn = false;
+let torchSupported = false;
 
 function showFeedback(message, type = "success") {
   feedback.textContent = message;
@@ -82,6 +85,48 @@ function resetScannerUi() {
   scannerStatus.textContent = "Iniciando câmera…";
   scannerStatus.classList.remove("is-error");
   scannerPanel.classList.remove("is-ready");
+  torchOn = false;
+  torchSupported = false;
+  btnTorch.hidden = true;
+  btnTorch.classList.remove("is-on");
+  btnTorch.setAttribute("aria-pressed", "false");
+  btnTorch.setAttribute("aria-label", "Ligar lanterna");
+}
+
+function getVideoTrack() {
+  return cameraVideo.srcObject?.getVideoTracks?.()?.[0] ?? null;
+}
+
+function updateTorchAvailability() {
+  const track = getVideoTrack();
+  if (!track) {
+    btnTorch.hidden = true;
+    return;
+  }
+
+  const capabilities = track.getCapabilities?.() ?? {};
+  torchSupported = Boolean(capabilities.torch);
+  btnTorch.hidden = !torchSupported;
+}
+
+async function setTorch(enabled) {
+  const track = getVideoTrack();
+  if (!track || !torchSupported) return;
+
+  try {
+    await track.applyConstraints({ advanced: [{ torch: enabled }] });
+    torchOn = enabled;
+    btnTorch.classList.toggle("is-on", enabled);
+    btnTorch.setAttribute("aria-pressed", String(enabled));
+    btnTorch.setAttribute("aria-label", enabled ? "Desligar lanterna" : "Ligar lanterna");
+  } catch {
+    btnTorch.hidden = true;
+    torchSupported = false;
+  }
+}
+
+async function toggleTorch() {
+  await setTorch(!torchOn);
 }
 
 function getCameraErrorMessage(error) {
@@ -104,6 +149,10 @@ function getCameraErrorMessage(error) {
 
 async function stopScanner() {
   scanning = false;
+
+  if (torchOn) {
+    await setTorch(false);
+  }
 
   if (scanControls) {
     scanControls.stop();
@@ -171,6 +220,8 @@ async function startScanner() {
     );
 
     scannerPanel.classList.add("is-ready");
+    cameraVideo.addEventListener("loadedmetadata", updateTorchAvailability, { once: true });
+    updateTorchAvailability();
   } catch (error) {
     scannerStatus.textContent = getCameraErrorMessage(error);
     scannerStatus.classList.add("is-error");
@@ -209,7 +260,8 @@ async function handleSave() {
 }
 
 btnScan.addEventListener("click", startScanner);
-btnCloseScanner.addEventListener("click", stopScanner);
+btnCancelScanner.addEventListener("click", stopScanner);
+btnTorch.addEventListener("click", toggleTorch);
 btnSave.addEventListener("click", handleSave);
 expiryDateInput.addEventListener("change", updateExpiryDisplay);
 expiryDateInput.addEventListener("input", updateExpiryDisplay);
