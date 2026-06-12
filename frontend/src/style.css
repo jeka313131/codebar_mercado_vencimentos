@@ -124,6 +124,26 @@ body.scanner-open {
   font-weight: 700;
 }
 
+.product-row--clickable {
+  cursor: pointer;
+  border-radius: 10px;
+  padding-left: 0.35rem;
+  padding-right: 0.35rem;
+  transition: background 0.15s ease;
+}
+
+.product-row--clickable:active {
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.table-row--clickable {
+  cursor: pointer;
+}
+
+.table-row--clickable:active {
+  background: rgba(255, 255, 255, 0.06);
+}
+
 .bottom-nav {
   position: fixed;
   left: 0;
@@ -292,6 +312,66 @@ body.scanner-open {
   padding: 0.9rem;
 }
 
+.btn-danger {
+  background: rgba(239, 68, 68, 0.9);
+  color: #fff;
+}
+
+.btn--compact {
+  width: auto;
+  margin-top: 0;
+  padding: 0.55rem 0.85rem;
+  font-size: 0.85rem;
+}
+
+.combobox-field {
+  position: relative;
+}
+
+.combobox {
+  position: relative;
+}
+
+.combobox-dropdown {
+  position: absolute;
+  top: calc(100% + 4px);
+  left: 0;
+  right: 0;
+  z-index: 20;
+  margin: 0;
+  padding: 0.35rem 0;
+  list-style: none;
+  max-height: 220px;
+  overflow-y: auto;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 8px;
+  background: #1e3554;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.35);
+}
+
+.combobox-dropdown li {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+  padding: 0.65rem 0.85rem;
+  cursor: pointer;
+}
+
+.combobox-dropdown li:active,
+.combobox-dropdown li:hover {
+  background: rgba(184, 230, 184, 0.15);
+}
+
+.combobox-option-name {
+  font-weight: 700;
+  font-size: 0.95rem;
+}
+
+.combobox-option-code {
+  font-size: 0.78rem;
+  color: var(--muted);
+}
+
 .date-field-row {
   position: relative;
   display: flex;
@@ -374,10 +454,22 @@ body.scanner-open {
   overflow-x: auto;
 }
 
+.table-wrap--scroll {
+  -webkit-overflow-scrolling: touch;
+  margin: 0 -0.25rem;
+  padding: 0 0.25rem 0.5rem;
+}
+
 .data-table {
   width: 100%;
   border-collapse: collapse;
   font-size: 0.9rem;
+}
+
+.data-table--stock {
+  width: max-content;
+  min-width: 100%;
+  table-layout: auto;
 }
 
 .data-table th,
@@ -385,6 +477,7 @@ body.scanner-open {
   padding: 0.75rem 0.5rem;
   text-align: left;
   border-bottom: 1px solid rgba(255, 255, 255, 0.12);
+  vertical-align: middle;
 }
 
 .data-table th {
@@ -394,10 +487,79 @@ body.scanner-open {
   text-transform: uppercase;
 }
 
-.table-product {
+.data-table--stock th,
+.data-table--stock td {
+  width: auto;
+  white-space: nowrap;
+}
+
+.data-table--stock .col-desc {
+  white-space: normal;
+  min-width: 9rem;
+  max-width: 11rem;
+}
+
+.data-table--stock .col-qty {
+  text-align: center;
+}
+
+.data-table--stock .col-date,
+.data-table--stock .col-code {
+  font-variant-numeric: tabular-nums;
+}
+
+.sortable-th {
+  padding: 0;
+}
+
+.sort-btn {
   display: flex;
   align-items: center;
+  gap: 0.35rem;
+  width: 100%;
+  padding: 0.75rem 0.5rem;
+  border: none;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  font-weight: 800;
+  text-transform: uppercase;
+  cursor: pointer;
+  touch-action: manipulation;
+}
+
+.sort-arrows {
+  display: inline-flex;
+  flex-direction: column;
+  gap: 0;
+  line-height: 0.65;
+}
+
+.sort-arrow {
+  font-size: 0.55rem;
+  opacity: 0.35;
+}
+
+.sort-arrow.is-active {
+  opacity: 1;
+  color: var(--accent);
+}
+
+.table-product {
+  display: flex;
+  align-items: flex-start;
   gap: 0.5rem;
+}
+
+.table-product-name {
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  overflow: hidden;
+  white-space: normal;
+  line-height: 1.15;
+  font-weight: 700;
+  word-break: break-word;
 }
 
 .table-thumb {
@@ -579,4 +741,74 @@ body.scanner-open {
   font-weight: 600;
   cursor: pointer;
   pointer-events: auto;
+}
+
+/* ——— Modal ——— */
+body.modal-open {
+  overflow: hidden;
+}
+
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 900;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  padding: 1rem;
+  padding-bottom: max(1rem, env(safe-area-inset-bottom));
+  background: rgba(0, 0, 0, 0.55);
+}
+
+.modal-card {
+  width: min(100%, 420px);
+  max-height: min(90dvh, 640px);
+  overflow-y: auto;
+  border-radius: var(--radius);
+  background: var(--bg-dark);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.4);
+}
+
+.modal-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  padding: 1rem 1.25rem 0.5rem;
+}
+
+.modal-title {
+  margin: 0;
+  font-size: 1.2rem;
+  font-weight: 800;
+}
+
+.modal-close {
+  border: none;
+  background: transparent;
+  color: var(--muted);
+  font-size: 1.75rem;
+  line-height: 1;
+  cursor: pointer;
+  padding: 0.15rem 0.35rem;
+}
+
+.modal-body {
+  padding: 0.5rem 1.25rem 1rem;
+}
+
+.modal-body .photo-preview {
+  margin-bottom: 0.5rem;
+}
+
+.modal-footer {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  gap: 0.5rem;
+  padding: 0 1.25rem 1.25rem;
+}
+
+.modal-footer .btn-primary {
+  margin-top: 0;
 }

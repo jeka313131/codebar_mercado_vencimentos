@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 220 48" fill="none">
+  <rect x="8" y="10" width="2" height="28" fill="#b8e6b8"/>
+  <rect x="13" y="10" width="1" height="28" fill="#b8e6b8"/>
+  <rect x="17" y="10" width="3" height="28" fill="#b8e6b8"/>
+  <rect x="23" y="10" width="1" height="28" fill="#b8e6b8"/>
+  <rect x="27" y="10" width="2" height="28" fill="#b8e6b8"/>
+  <rect x="32" y="10" width="4" height="28" fill="#b8e6b8"/>
+  <text x="128" y="32" text-anchor="middle" font-family="system-ui,Segoe UI,sans-serif" font-size="26" font-weight="700" fill="#f8fafc">Venceu</text>
+</svg>

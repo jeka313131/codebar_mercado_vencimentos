@@ -1,4 +1,5 @@
 import { fetchProductsExpiring } from "../api.js";
+import { openProductModal } from "../components/productModal.js";
 import { formatExpiryLabel } from "../utils/dates.js";
 import { escapeHtml } from "../utils/html.js";
 import { navigate } from "../router.js";
@@ -14,7 +15,7 @@ let activeFilter = 7;
 
 function renderProductRow(product) {
   return `
-    <article class="product-row">
+    <article class="product-row product-row--clickable" data-id="${product.id}" role="button" tabindex="0">
       <img
         class="product-thumb"
         src="${escapeHtml(product.imageUrl)}"
@@ -72,16 +73,23 @@ export async function renderHome(container) {
   `;
 
   const listEl = container.querySelector("#product-list");
+  let currentProducts = [];
+
+  function openProductEditor(productId) {
+    const product = currentProducts.find((item) => item.id === productId);
+    if (!product) return;
+    openProductModal(product, { onUpdated: loadList, onDeleted: loadList });
+  }
 
   async function loadList() {
     listEl.innerHTML = `<p class="loading-msg">Carregando…</p>`;
     try {
-      const products = await fetchProductsExpiring(activeFilter);
-      if (!products.length) {
+      currentProducts = await fetchProductsExpiring(activeFilter);
+      if (!currentProducts.length) {
         listEl.innerHTML = `<p class="empty-msg">Nenhum produto neste período.</p>`;
         return;
       }
-      listEl.innerHTML = products.map(renderProductRow).join("");
+      listEl.innerHTML = currentProducts.map(renderProductRow).join("");
     } catch (error) {
       listEl.innerHTML = `<p class="error-msg">${escapeHtml(error.message)}</p>`;
     }
@@ -100,7 +108,21 @@ export async function renderHome(container) {
   });
 
   container.querySelector("#btn-go-add").addEventListener("click", () => {
-    navigate("/adicionar");
+    navigate("/adicionar?scan=1");
+  });
+
+  listEl.addEventListener("click", (event) => {
+    const row = event.target.closest("[data-id]");
+    if (!row) return;
+    openProductEditor(row.dataset.id);
+  });
+
+  listEl.addEventListener("keydown", (event) => {
+    if (event.key !== "Enter" && event.key !== " ") return;
+    const row = event.target.closest("[data-id]");
+    if (!row) return;
+    event.preventDefault();
+    openProductEditor(row.dataset.id);
   });
 
   await loadList();

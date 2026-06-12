@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Logos Venceu — preview</title>
+  <style>
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: system-ui, sans-serif;
+      background: #1e3554;
+      color: #f8fafc;
+      padding: 1.5rem;
+    }
+    h1 { margin: 0 0 0.25rem; font-size: 1.4rem; }
+    p { margin: 0 0 1.5rem; color: #cbd5e1; font-size: 0.9rem; }
+    .grid {
+      display: grid;
+      gap: 1rem;
+      grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+    }
+    .card {
+      background: #2b4a72;
+      border: 1px solid rgba(255,255,255,0.12);
+      border-radius: 12px;
+      padding: 1rem;
+    }
+    .card h2 {
+      margin: 0 0 0.75rem;
+      font-size: 0.8rem;
+      font-weight: 700;
+      color: #b8e6b8;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+    .logo-box {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 72px;
+      padding: 0.5rem;
+      background: rgba(0,0,0,0.15);
+      border-radius: 8px;
+    }
+    .logo-box img { max-width: 100%; height: 48px; }
+    .logo-box.light { background: #f8fafc; }
+  </style>
+</head>
+<body>
+  <h1>Logos Venceu</h1>
+  <p>8 opções slim — fundo escuro e claro para comparar.</p>
+  <div class="grid" id="grid"></div>
+  <script>
+    const logos = [
+      ["01 Minimal", "venceu-01-minimal.svg"],
+      ["02 Dot", "venceu-02-dot.svg"],
+      ["03 Calendário", "venceu-03-calendar.svg"],
+      ["04 Barcode", "venceu-04-barcode.svg"],
+      ["05 Pill", "venceu-05-pill.svg"],
+      ["06 Sublinhado", "venceu-06-underline.svg"],
+      ["07 Alerta", "venceu-07-alert.svg"],
+      ["08 Stacked", "venceu-08-stacked.svg"],
+    ];
+    document.getElementById("grid").innerHTML = logos.map(([name, file]) => `
+      <article class="card">
+        <h2>${name}</h2>
+        <div class="logo-box"><img src="${file}" alt="${name}" /></div>
+        <div class="logo-box light" style="margin-top:0.5rem"><img src="${file}" alt="${name}" /></div>
+      </article>
+    `).join("");
+  </script>
+</body>
+</html>

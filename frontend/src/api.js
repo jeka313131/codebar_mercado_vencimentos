@@ -77,6 +77,65 @@ export async function uploadProductImage(file) {
   return data.publicUrl;
 }
 
+export async function fetchProductCatalog() {
+  const { data, error } = await requireSupabase()
+    .from("products")
+    .select("barcode, name, image_url, created_at")
+    .order("created_at", { ascending: false });
+
+  if (error) {
+    throw new Error("Não foi possível carregar o catálogo.");
+  }
+
+  const seen = new Set();
+  const items = [];
+
+  for (const row of data) {
+    const barcode = row.barcode?.trim();
+    if (!barcode || seen.has(barcode)) continue;
+    seen.add(barcode);
+    items.push({
+      barcode,
+      name: row.name,
+      imageUrl: row.image_url || PLACEHOLDER_IMAGE,
+    });
+  }
+
+  return items;
+}
+
+export async function updateProduct(id, { barcode, name, expiryDate, quantity, imageUrl }) {
+  const { data, error } = await requireSupabase()
+    .from("products")
+    .update({
+      barcode: barcode.trim(),
+      name: name.trim(),
+      expiry_date: expiryDate,
+      quantity: Number(quantity) || 1,
+      image_url: imageUrl || null,
+    })
+    .eq("id", id)
+    .select(PRODUCT_COLUMNS)
+    .single();
+
+  if (error) {
+    throw new Error(error.message || "Não foi possível atualizar.");
+  }
+
+  return mapProduct(data);
+}
+
+export async function deleteProduct(id) {
+  const { error } = await requireSupabase()
+    .from("products")
+    .delete()
+    .eq("id", id);
+
+  if (error) {
+    throw new Error(error.message || "Não foi possível excluir.");
+  }
+}
+
 export async function saveProduct({ barcode, name, expiryDate, quantity, imageUrl }) {
   const { data, error } = await requireSupabase()
     .from("products")

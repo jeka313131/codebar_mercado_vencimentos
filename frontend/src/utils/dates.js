@@ -5,6 +5,11 @@ export function formatDateBr(isoDate) {
   return `${day}/${month}`;
 }
 
+export function formatDateBrYy(isoDate) {
+  const [year, month, day] = isoDate.split("-");
+  return `${day}/${month}/${year.slice(-2)}`;
+}
+
 export function isoToDateBrFull(isoDate) {
   const [year, month, day] = isoDate.split("-");
   return `${day}/${month}/${year}`;

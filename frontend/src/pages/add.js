@@ -1,7 +1,14 @@
-import { getPlaceholderImage, saveProduct, uploadProductImage } from "../api.js";
-import { navigate } from "../router.js";
+import {
+  fetchProductCatalog,
+  getPlaceholderImage,
+  saveProduct,
+  uploadProductImage,
+} from "../api.js";
+import { navigate, getRouteQuery } from "../router.js";
 import { startScanner } from "../scanner.js";
+import { debounce, findByBarcode, searchByName } from "../utils/catalog.js";
 import { isoToDateBrFull, maskDateBrInput, parseDateBrToIso } from "../utils/dates.js";
+import { escapeHtml } from "../utils/html.js";
 
 export async function renderAdd(container) {
   container.className = "page page-add";
@@ -35,9 +42,20 @@ export async function renderAdd(container) {
         </div>
       </div>
 
-      <div class="field">
+      <div class="field combobox-field">
         <label for="product-name">Descrição</label>
-        <input id="product-name" type="text" placeholder="Ex.: Arroz Branco 1kg" autocomplete="off" />
+        <div class="combobox" id="name-combobox">
+          <input
+            id="product-name"
+            type="text"
+            placeholder="Busque pelo nome ou digite"
+            autocomplete="off"
+            role="combobox"
+            aria-expanded="false"
+            aria-controls="product-name-list"
+          />
+          <ul id="product-name-list" class="combobox-dropdown" role="listbox" hidden></ul>
+        </div>
       </div>
 
       <div class="field">
@@ -73,6 +91,7 @@ export async function renderAdd(container) {
 
   const barcodeInput = container.querySelector("#barcode");
   const nameInput = container.querySelector("#product-name");
+  const nameList = container.querySelector("#product-name-list");
   const quantityInput = container.querySelector("#quantity");
   const expiryText = container.querySelector("#expiry-date-text");
   const expiryNative = container.querySelector("#expiry-date-native");
@@ -82,6 +101,14 @@ export async function renderAdd(container) {
   const btnSave = container.querySelector("#btn-save");
 
   let selectedPhoto = null;
+  let catalogImageUrl = null;
+  let catalog = [];
+
+  try {
+    catalog = await fetchProductCatalog();
+  } catch {
+    catalog = [];
+  }
 
   function showFeedback(message, type = "success") {
     feedback.textContent = message;
@@ -93,6 +120,59 @@ export async function renderAdd(container) {
     return parseDateBrToIso(expiryText.value) || expiryNative.value || null;
   }
 
+  function applyCatalogEntry(entry) {
+    if (!entry) return;
+    barcodeInput.value = entry.barcode;
+    nameInput.value = entry.name;
+    photoPreview.src = entry.imageUrl;
+    catalogImageUrl = entry.imageUrl !== getPlaceholderImage() ? entry.imageUrl : null;
+    selectedPhoto = null;
+    photoInput.value = "";
+    hideNameDropdown();
+  }
+
+  function hideNameDropdown() {
+    nameList.hidden = true;
+    nameInput.setAttribute("aria-expanded", "false");
+  }
+
+  function showNameDropdown(matches) {
+    if (!matches.length) {
+      hideNameDropdown();
+      return;
+    }
+
+    nameList.innerHTML = matches
+      .map(
+        (item) => `
+          <li role="option" data-barcode="${escapeHtml(item.barcode)}">
+            <span class="combobox-option-name">${escapeHtml(item.name)}</span>
+            <span class="combobox-option-code">${escapeHtml(item.barcode)}</span>
+          </li>
+        `,
+      )
+      .join("");
+    nameList.hidden = false;
+    nameInput.setAttribute("aria-expanded", "true");
+  }
+
+  function handleBarcodeLookup() {
+    const entry = findByBarcode(catalog, barcodeInput.value);
+    if (entry) applyCatalogEntry(entry);
+  }
+
+  function openScanner() {
+    startScanner({
+      onScan: (code) => {
+        barcodeInput.value = code;
+        handleBarcodeLookup();
+        if (!findByBarcode(catalog, code)) {
+          quantityInput.focus();
+        }
+      },
+    });
+  }
+
   container.querySelector("#btn-back").addEventListener("click", () => {
     navigate("/");
   });
@@ -101,16 +181,27 @@ export async function renderAdd(container) {
     const file = photoInput.files?.[0];
     if (!file) return;
     selectedPhoto = file;
+    catalogImageUrl = null;
     photoPreview.src = URL.createObjectURL(file);
   });
 
-  container.querySelector("#btn-scan").addEventListener("click", () => {
-    startScanner({
-      onScan: (code) => {
-        barcodeInput.value = code;
-        nameInput.focus();
-      },
-    });
+  container.querySelector("#btn-scan").addEventListener("click", openScanner);
+
+  barcodeInput.addEventListener("input", debounce(handleBarcodeLookup, 200));
+
+  nameInput.addEventListener("input", debounce(() => {
+    showNameDropdown(searchByName(catalog, nameInput.value));
+  }, 120));
+
+  nameList.addEventListener("click", (event) => {
+    const option = event.target.closest("[data-barcode]");
+    if (!option) return;
+    const entry = findByBarcode(catalog, option.dataset.barcode);
+    if (entry) applyCatalogEntry(entry);
+  });
+
+  container.addEventListener("click", (event) => {
+    if (!event.target.closest("#name-combobox")) hideNameDropdown();
   });
 
   expiryText.addEventListener("input", () => {
@@ -164,7 +255,7 @@ export async function renderAdd(container) {
     btnSave.disabled = true;
 
     try {
-      let imageUrl = null;
+      let imageUrl = catalogImageUrl;
       if (selectedPhoto) {
         imageUrl = await uploadProductImage(selectedPhoto);
       }
@@ -177,4 +268,8 @@ export async function renderAdd(container) {
       btnSave.disabled = false;
     }
   });
+
+  if (getRouteQuery().get("scan") === "1") {
+    requestAnimationFrame(() => openScanner());
+  }
 }

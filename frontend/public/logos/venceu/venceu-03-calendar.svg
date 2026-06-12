@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 220 48" fill="none">
+  <rect x="8" y="12" width="28" height="26" rx="4" stroke="#b8e6b8" stroke-width="2"/>
+  <path d="M8 20h28M18 8v6M26 8v6" stroke="#b8e6b8" stroke-width="2" stroke-linecap="round"/>
+  <circle cx="18" cy="28" r="2.5" fill="#ef4444"/>
+  <text x="128" y="32" text-anchor="middle" font-family="system-ui,Segoe UI,sans-serif" font-size="26" font-weight="700" fill="#f8fafc">Venceu</text>
+</svg>

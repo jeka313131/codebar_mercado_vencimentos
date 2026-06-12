@@ -6,7 +6,14 @@ export function registerRoute(path, handler) {
 
 function getPath() {
   const hash = window.location.hash.replace(/^#/, "") || "/";
-  return hash.startsWith("/") ? hash : `/${hash}`;
+  const path = hash.split("?")[0];
+  return path.startsWith("/") ? path : `/${path}`;
+}
+
+export function getRouteQuery() {
+  const hash = window.location.hash.replace(/^#/, "") || "/";
+  const query = hash.split("?")[1] || "";
+  return new URLSearchParams(query);
 }
 
 export async function navigate(path) {
