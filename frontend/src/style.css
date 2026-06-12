@@ -292,41 +292,63 @@ body.scanner-open {
   padding: 0.9rem;
 }
 
-.date-picker-wrap {
+.date-field-row {
   position: relative;
-  min-height: 48px;
-  border: 1px solid rgba(255, 255, 255, 0.2);
-  border-radius: 8px;
-  background: rgba(15, 23, 42, 0.35);
-  overflow: hidden;
+  display: flex;
+  gap: 0.5rem;
+  align-items: stretch;
 }
 
-.date-picker-display {
-  padding: 0.75rem 0.85rem;
-  font-size: 1rem;
-  pointer-events: none;
-  color: var(--text);
+.date-field-row input[type="text"] {
+  flex: 1;
+  min-width: 0;
 }
 
-.date-picker-display.is-empty {
-  color: var(--muted);
-}
-
-.date-input-native {
-  position: absolute;
-  inset: 0;
-  width: 100%;
-  height: 100%;
-  margin: 0;
+.btn-date-pick {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 52px;
+  min-height: 52px;
   padding: 0;
-  border: none;
-  opacity: 0;
+  border: 1px solid rgba(184, 230, 184, 0.45);
+  border-radius: 8px;
+  background: rgba(184, 230, 184, 0.12);
+  color: var(--accent);
   cursor: pointer;
-  font-size: 16px;
+  touch-action: manipulation;
 }
 
-.date-picker-wrap:focus-within {
+.btn-date-pick:hover,
+.btn-date-pick:active {
+  background: rgba(184, 230, 184, 0.22);
+  border-color: var(--accent);
+}
+
+.btn-date-pick:focus-visible {
   outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+.btn-date-pick-icon {
+  width: 24px;
+  height: 24px;
+  pointer-events: none;
+}
+
+.date-input-native-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  padding: 0;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+  opacity: 0;
+  pointer-events: none;
 }
 
 .feedback {

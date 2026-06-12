@@ -1,12 +1,7 @@
 import { getPlaceholderImage, saveProduct, uploadProductImage } from "../api.js";
 import { navigate } from "../router.js";
-import { initScanner, startScanner } from "../scanner.js";
-
-function formatDateDisplay(isoDate) {
-  if (!isoDate) return "Toque para escolher a data";
-  const [year, month, day] = isoDate.split("-");
-  return `${day}/${month}/${year}`;
-}
+import { startScanner } from "../scanner.js";
+import { isoToDateBrFull, maskDateBrInput, parseDateBrToIso } from "../utils/dates.js";
 
 export async function renderAdd(container) {
   container.className = "page page-add";
@@ -47,14 +42,27 @@ export async function renderAdd(container) {
 
       <div class="field">
         <label for="quantity">Quantidade</label>
-        <input id="quantity" type="number" min="1" value="1" inputmode="numeric" />
+        <input id="quantity" type="number" min="1" inputmode="numeric" placeholder="Ex.: 5" />
       </div>
 
       <div class="field">
-        <span class="field-label">Data de vencimento</span>
-        <div class="date-picker-wrap">
-          <div id="expiry-display" class="date-picker-display is-empty">Toque para escolher a data</div>
-          <input id="expiry-date" type="date" class="date-input-native" aria-label="Data de vencimento" />
+        <label for="expiry-date-text">Data de vencimento</label>
+        <div class="date-field-row">
+          <input
+            id="expiry-date-text"
+            type="text"
+            inputmode="numeric"
+            placeholder="DD/MM/AAAA"
+            autocomplete="off"
+            maxlength="10"
+          />
+          <button type="button" class="btn-date-pick" id="btn-date-pick" title="Abrir calendário" aria-label="Abrir calendário">
+            <svg class="btn-date-pick-icon" viewBox="0 0 24 24" aria-hidden="true">
+              <rect x="3" y="4" width="18" height="18" rx="2" fill="none" stroke="currentColor" stroke-width="2"/>
+              <path d="M16 2v4M8 2v4M3 10h18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+            </svg>
+          </button>
+          <input id="expiry-date-native" type="date" class="date-input-native-hidden" tabindex="-1" aria-hidden="true" />
         </div>
       </div>
 
@@ -66,8 +74,8 @@ export async function renderAdd(container) {
   const barcodeInput = container.querySelector("#barcode");
   const nameInput = container.querySelector("#product-name");
   const quantityInput = container.querySelector("#quantity");
-  const expiryInput = container.querySelector("#expiry-date");
-  const expiryDisplay = container.querySelector("#expiry-display");
+  const expiryText = container.querySelector("#expiry-date-text");
+  const expiryNative = container.querySelector("#expiry-date-native");
   const photoInput = container.querySelector("#product-photo");
   const photoPreview = container.querySelector("#photo-preview");
   const feedback = container.querySelector("#feedback");
@@ -81,14 +89,8 @@ export async function renderAdd(container) {
     feedback.hidden = false;
   }
 
-  function updateExpiryDisplay() {
-    if (expiryInput.value) {
-      expiryDisplay.textContent = formatDateDisplay(expiryInput.value);
-      expiryDisplay.classList.remove("is-empty");
-    } else {
-      expiryDisplay.textContent = "Toque para escolher a data";
-      expiryDisplay.classList.add("is-empty");
-    }
+  function getExpiryIso() {
+    return parseDateBrToIso(expiryText.value) || expiryNative.value || null;
   }
 
   container.querySelector("#btn-back").addEventListener("click", () => {
@@ -111,19 +113,51 @@ export async function renderAdd(container) {
     });
   });
 
-  expiryInput.addEventListener("change", updateExpiryDisplay);
-  expiryInput.addEventListener("input", updateExpiryDisplay);
+  expiryText.addEventListener("input", () => {
+    const masked = maskDateBrInput(expiryText.value);
+    if (masked !== expiryText.value) {
+      expiryText.value = masked;
+    }
+    const iso = parseDateBrToIso(expiryText.value);
+    if (iso) expiryNative.value = iso;
+  });
+
+  expiryNative.addEventListener("change", () => {
+    if (expiryNative.value) {
+      expiryText.value = isoToDateBrFull(expiryNative.value);
+    }
+  });
+
+  container.querySelector("#btn-date-pick").addEventListener("click", () => {
+    if (typeof expiryNative.showPicker === "function") {
+      expiryNative.showPicker();
+      return;
+    }
+    expiryNative.click();
+  });
 
   btnSave.addEventListener("click", async () => {
     feedback.hidden = true;
 
     const barcode = barcodeInput.value.trim();
     const name = nameInput.value.trim();
-    const expiryDate = expiryInput.value;
-    const quantity = quantityInput.value;
+    const expiryDate = getExpiryIso();
+    const quantity = quantityInput.value.trim();
 
-    if (!barcode || !name || !expiryDate) {
-      showFeedback("Preencha código, descrição e vencimento.", "error");
+    if (!barcode || !name) {
+      showFeedback("Preencha código e descrição.", "error");
+      return;
+    }
+
+    if (!expiryDate) {
+      showFeedback("Informe a data no formato DD/MM/AAAA.", "error");
+      expiryText.focus();
+      return;
+    }
+
+    if (!quantity || Number(quantity) < 1) {
+      showFeedback("Informe a quantidade.", "error");
+      quantityInput.focus();
       return;
     }
 
@@ -143,6 +177,4 @@ export async function renderAdd(container) {
       btnSave.disabled = false;
     }
   });
-
-  updateExpiryDisplay();
 }
