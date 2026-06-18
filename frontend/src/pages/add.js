@@ -4,6 +4,7 @@ import {
   saveProduct,
   uploadProductImage,
 } from "../api.js";
+import { renderBottomNav, initBottomNav } from "../components/bottomNav.js";
 import { navigate, getRouteQuery } from "../router.js";
 import { startScanner } from "../scanner.js";
 import { debounce, findByBarcode, searchByName } from "../utils/catalog.js";
@@ -87,7 +88,10 @@ export async function renderAdd(container) {
       <button type="button" id="btn-save" class="btn btn-primary">Salvar produto</button>
       <p id="feedback" class="feedback" hidden></p>
     </main>
+    ${renderBottomNav()}
   `;
+
+  initBottomNav(container, { navigate });
 
   const barcodeInput = container.querySelector("#barcode");
   const nameInput = container.querySelector("#product-name");

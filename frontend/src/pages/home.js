@@ -1,5 +1,6 @@
 import { fetchProductsExpiring } from "../api.js";
 import { openProductModal } from "../components/productModal.js";
+import { renderBottomNav, initBottomNav } from "../components/bottomNav.js";
 import { formatExpiryLabel } from "../utils/dates.js";
 import { escapeHtml } from "../utils/html.js";
 import { navigate } from "../router.js";
@@ -57,19 +58,7 @@ export async function renderHome(container) {
     <div class="product-list" id="product-list">
       <p class="loading-msg">Carregando…</p>
     </div>
-    <nav class="bottom-nav" aria-label="Navegação principal">
-      <button type="button" class="nav-fab nav-fab--stock" id="btn-go-stock" aria-label="Estoque">
-        <svg viewBox="0 0 24 24" aria-hidden="true">
-          <path fill="currentColor" d="M4 8h4V4H4v4zm6 12h4v-4h-4v4zm-6 0h4v-4H4v4zm0-6h4v-4H4v4zm6 0h4v-4h-4v4zm6-10v4h4V4h-4zm-6 4h4V4h-4v4zm6 6h4v-4h-4v4zm0 6h4v-4h-4v4z"/>
-        </svg>
-      </button>
-      <button type="button" class="nav-fab nav-fab--add" id="btn-go-add" aria-label="Adicionar produto">
-        <svg viewBox="0 0 24 24" aria-hidden="true">
-          <path fill="currentColor" d="M7 18c-1.1 0-1.99.9-1.99 2S5.9 22 7 22s2-.9 2-2-.9-2-2-2zM1 2v2h2l3.6 7.59-1.35 2.45c-.16.28-.25.61-.25.96 0 1.1.9 2 2 2h12v-2H7.42c-.14 0-.25-.1-.25-.25l.03-.12.9-1.63h7.45c.75 0 1.41-.41 1.75-1.03l3.58-6.49A1 1 0 0 0 20 5H5.21l-.94-2H1zm16 16c-1.1 0-1.99.9-1.99 2s.89 2 1.99 2 2-.9 2-2-.9-2-2-2z"/>
-          <path fill="currentColor" d="M19 3h2v2h-2V3zm0 4h2v2h-2V7z"/>
-        </svg>
-      </button>
-    </nav>
+    ${renderBottomNav()}
   `;
 
   const listEl = container.querySelector("#product-list");
@@ -103,13 +92,7 @@ export async function renderHome(container) {
     loadList();
   });
 
-  container.querySelector("#btn-go-stock").addEventListener("click", () => {
-    navigate("/estoque");
-  });
-
-  container.querySelector("#btn-go-add").addEventListener("click", () => {
-    navigate("/adicionar?scan=1");
-  });
+  initBottomNav(container, { navigate });
 
   listEl.addEventListener("click", (event) => {
     const row = event.target.closest("[data-id]");

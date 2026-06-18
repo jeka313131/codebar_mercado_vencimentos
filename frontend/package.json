@@ -10,7 +10,8 @@
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.107.0",
-    "@zxing/browser": "^0.1.5"
+    "@zxing/browser": "^0.1.5",
+    "firebase": "^12.14.0"
   },
   "devDependencies": {
     "vite": "^6.3.5",

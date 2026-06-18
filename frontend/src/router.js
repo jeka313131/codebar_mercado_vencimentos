@@ -4,7 +4,7 @@ export function registerRoute(path, handler) {
   routes.set(path, handler);
 }
 
-function getPath() {
+export function getPath() {
   const hash = window.location.hash.replace(/^#/, "") || "/";
   const path = hash.split("?")[0];
   return path.startsWith("/") ? path : `/${path}`;
@@ -33,7 +33,6 @@ export async function renderRoute() {
 
 export function initRouter() {
   window.addEventListener("hashchange", () => {
-    renderRoute();
+    // renderRoute é acionado pelo auth guard após checar sessão
   });
-  renderRoute();
 }

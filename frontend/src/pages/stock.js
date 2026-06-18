@@ -1,5 +1,6 @@
 import { fetchAllProducts } from "../api.js";
 import { openProductModal } from "../components/productModal.js";
+import { renderBottomNav, initBottomNav } from "../components/bottomNav.js";
 import { formatDateBrYy } from "../utils/dates.js";
 import { escapeHtml } from "../utils/html.js";
 import { navigate } from "../router.js";
@@ -89,7 +90,10 @@ export async function renderStock(container) {
     <div class="table-wrap table-wrap--scroll" id="stock-table">
       <p class="loading-msg">Carregando…</p>
     </div>
+    ${renderBottomNav()}
   `;
+
+  initBottomNav(container, { navigate });
 
   container.querySelector("#btn-back").addEventListener("click", () => {
     navigate("/");

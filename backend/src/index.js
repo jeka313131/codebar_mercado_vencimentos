@@ -1,6 +1,11 @@
 import cors from "cors";
 import express from "express";
+import authRouter from "./routes/auth.js";
 import productsRouter from "./routes/products.js";
+import whatsappRouter from "./routes/whatsapp.js";
+import cronRouter from "./routes/cron.js";
+import { startAlertCron } from "./alertsScheduler.js";
+import { initFirebaseAdmin } from "./firebaseAdmin.js";
 
 const app = express();
 const PORT = Number(process.env.PORT) || 3000;
@@ -27,14 +32,18 @@ app.use(
 );
 app.use(express.json());
 
+initFirebaseAdmin();
+
 app.get("/api/health", (_req, res) => {
   res.json({ ok: true });
 });
 
+app.use("/api/auth", authRouter);
 app.use("/api/products", productsRouter);
+app.use("/api/whatsapp", whatsappRouter);
+app.use("/api/cron", cronRouter);
 
 app.listen(PORT, "0.0.0.0", () => {
   console.log(`Backend rodando na porta ${PORT}`);
+  startAlertCron();
 });
-
-// faça dar certo
