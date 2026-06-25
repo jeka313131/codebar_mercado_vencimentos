@@ -12,6 +12,7 @@ export async function syncUserFromFirebase(firebaseUser) {
     onboardingComplete: existing?.onboardingComplete ?? false,
     whatsappGroupId: existing?.whatsappGroupId ?? null,
     alertStartHour: existing?.alertStartHour ?? 8,
+    alertDaysBefore: existing?.alertDaysBefore ?? 7,
   });
 }
 
@@ -27,5 +28,6 @@ export async function syncUserPhoneVerified(uid, phone, firebaseUser) {
     onboardingComplete: true,
     whatsappGroupId: existing?.whatsappGroupId ?? null,
     alertStartHour: existing?.alertStartHour ?? 8,
+    alertDaysBefore: existing?.alertDaysBefore ?? 7,
   });
 }

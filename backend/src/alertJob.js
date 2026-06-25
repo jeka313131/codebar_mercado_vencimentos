@@ -1,22 +1,25 @@
 import {
-  ALERT_DAYS,
-  filterUnsentProducts,
+  attachDaysRemaining,
+  filterUnsentAlertEntries,
   insertAlertLogs,
   listAllAlertUsers,
-  listProductsExpiringOn,
+  listProductsExpiringWithin,
   listUsersForAlertHour,
 } from "./alertStore.js";
 import { sendWhatsAppToGroup } from "./evolution.js";
-import { addDaysToIso, getBrasiliaNow } from "./timezone.js";
+import { getBrasiliaNow } from "./timezone.js";
 
 function formatDayLabel(days) {
   if (days === 1) return "1 dia";
   return `${days} dias`;
 }
 
-function buildMessage(daysBeforeExpiry, products) {
-  const header = `🔔 *Alerta Venceu* — vence em ${formatDayLabel(daysBeforeExpiry)}`;
-  const lines = products.map((p) => `• ${p.name} (qtd: ${p.quantity ?? 1})`);
+function buildMessage(entries) {
+  const header = "🔔 *Alerta Venceu*";
+  const lines = entries.map(
+    ({ product, daysBeforeExpiry }) =>
+      `• ${product.name} — vence em ${formatDayLabel(daysBeforeExpiry)} (qtd: ${product.quantity ?? 1})`,
+  );
   return `${header}\n\n${lines.join("\n")}`;
 }
 
@@ -37,16 +40,15 @@ export async function runExpiryAlerts({ force = false } = {}) {
     summary.usersProcessed += 1;
 
     try {
-      for (const days of ALERT_DAYS) {
-        const expiryDate = addDaysToIso(today, days);
-        const products = await listProductsExpiringOn(user.id, expiryDate);
-        const pending = await filterUnsentProducts(products, days);
+      const maxDays = user.alert_days_before ?? 7;
+      const products = await listProductsExpiringWithin(user.id, today, maxDays);
+      const withDays = attachDaysRemaining(products, today);
+      const pending = await filterUnsentAlertEntries(withDays);
 
-        if (!pending.length) continue;
-
-        const message = buildMessage(days, pending);
+      if (pending.length) {
+        const message = buildMessage(pending);
         await sendWhatsAppToGroup(user.whatsapp_group_id, message);
-        await insertAlertLogs(user.id, pending, days, message);
+        await insertAlertLogs(user.id, pending, message);
         summary.messagesSent += 1;
       }
     } catch (error) {

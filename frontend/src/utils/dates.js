@@ -46,11 +46,15 @@ export function formatExpiryLabel(isoDate) {
 }
 
 export function todayIso() {
-  const now = new Date();
-  const y = now.getFullYear();
-  const m = String(now.getMonth() + 1).padStart(2, "0");
-  const d = String(now.getDate()).padStart(2, "0");
-  return `${y}-${m}-${d}`;
+  const parts = new Intl.DateTimeFormat("en-US", {
+    timeZone: "America/Sao_Paulo",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).formatToParts(new Date());
+
+  const get = (type) => parts.find((p) => p.type === type)?.value ?? "0";
+  return `${get("year")}-${get("month")}-${get("day")}`;
 }
 
 export function addDaysIso(isoDate, days) {

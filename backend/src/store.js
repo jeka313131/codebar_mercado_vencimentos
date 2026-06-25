@@ -1,17 +1,8 @@
 import { mapProduct, supabase } from "./supabase.js";
+import { addDaysToIso, getBrasiliaNow } from "./timezone.js";
 
 const PRODUCT_COLUMNS =
   "id, barcode, name, expiry_date, quantity, image_url, created_at, user_id";
-
-function todayIso() {
-  return new Date().toISOString().slice(0, 10);
-}
-
-function addDaysIso(iso, days) {
-  const date = new Date(`${iso}T12:00:00`);
-  date.setDate(date.getDate() + days);
-  return date.toISOString().slice(0, 10);
-}
 
 export async function listAllProducts(userId) {
   const { data, error } = await supabase
@@ -25,7 +16,7 @@ export async function listAllProducts(userId) {
 }
 
 export async function listExpiringProducts(userId, filterDays) {
-  const today = todayIso();
+  const { date: today } = getBrasiliaNow();
   let query = supabase
     .from("products")
     .select(PRODUCT_COLUMNS)
@@ -34,10 +25,8 @@ export async function listExpiringProducts(userId, filterDays) {
 
   if (filterDays === 0) {
     query = query.eq("expiry_date", today);
-  } else if (filterDays === 1) {
-    query = query.eq("expiry_date", addDaysIso(today, 1));
   } else {
-    const end = addDaysIso(today, filterDays);
+    const end = addDaysToIso(today, filterDays);
     query = query.gte("expiry_date", today).lte("expiry_date", end);
   }
 
@@ -119,12 +108,15 @@ export async function removeProduct(userId, id) {
   if (error) throw new Error(error.message);
 }
 
-export async function uploadProductImage(userId, buffer, ext) {
+export async function uploadProductImage(userId, buffer, ext, contentType) {
   const fileName = `${userId}/${crypto.randomUUID()}.${ext}`;
+  const mimeType = contentType || `image/${ext === "jpg" ? "jpeg" : ext}`;
 
-  const { error } = await supabase.storage
-    .from("product-images")
-    .upload(fileName, buffer, { cacheControl: "3600", upsert: false });
+  const { error } = await supabase.storage.from("product-images").upload(fileName, buffer, {
+    cacheControl: "3600",
+    upsert: false,
+    contentType: mimeType,
+  });
 
   if (error) throw new Error(error.message);
 

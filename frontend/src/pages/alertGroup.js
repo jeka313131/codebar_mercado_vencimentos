@@ -18,6 +18,15 @@ function renderHourOptions(selected = 8) {
   }).join("");
 }
 
+function renderDaysOptions(selected = 7) {
+  return Array.from({ length: 31 }, (_, i) => {
+    const days = i + 1;
+    const label = days === 1 ? "1 dia" : `${days} dias`;
+    const sel = days === selected ? " selected" : "";
+    return `<option value="${days}"${sel}>${label}</option>`;
+  }).join("");
+}
+
 export async function renderAlertGroup(container) {
   container.className = "page page-alert-group";
   container.innerHTML = `
@@ -57,6 +66,12 @@ export async function renderAlertGroup(container) {
       </select>
       <p class="alert-group-hint">Horário de Brasília. Alertas enviados diariamente nesta hora.</p>
 
+      <p class="alert-group-label">Alertar vencimento com antecedência de:</p>
+      <select id="alert-days-before" class="alert-group-select">
+        ${renderDaysOptions()}
+      </select>
+      <p class="alert-group-hint">Aviso diário de N dias antes até 1 dia antes do vencimento.</p>
+
       <div class="alert-group-actions">
         <button type="button" class="btn btn-cancel" id="btn-cancel">Cancelar</button>
         <button type="button" class="btn btn-save" id="btn-save" disabled>Salvar</button>
@@ -72,6 +87,7 @@ export async function renderAlertGroup(container) {
   const phoneInput = container.querySelector("#evolution-phone");
   const groupSelect = container.querySelector("#group-select");
   const hourSelect = container.querySelector("#alert-start-hour");
+  const daysSelect = container.querySelector("#alert-days-before");
   const statusDot = container.querySelector("#status-dot");
   const statusText = container.querySelector("#status-text");
   const btnTest = container.querySelector("#btn-test");
@@ -197,7 +213,8 @@ export async function renderAlertGroup(container) {
 
     try {
       const alertStartHour = Number(hourSelect.value);
-      await saveWhatsappGroup(groupSelect.value, true, alertStartHour);
+      const alertDaysBefore = Number(daysSelect.value);
+      await saveWhatsappGroup(groupSelect.value, true, alertStartHour, alertDaysBefore);
       await reloadAuthProfile();
       showFeedback("Grupo salvo com sucesso!", "success");
       setTimeout(() => navigate("/"), 1200);
@@ -217,6 +234,9 @@ export async function renderAlertGroup(container) {
     profile = await fetchProfile();
     if (profile?.alertStartHour !== undefined) {
       hourSelect.value = String(profile.alertStartHour);
+    }
+    if (profile?.alertDaysBefore !== undefined) {
+      daysSelect.value = String(profile.alertDaysBefore);
     }
   } catch {
     // perfil opcional na carga inicial

@@ -20,9 +20,9 @@ export function syncUserToSupabase() {
   return authFetch("/api/auth/sync-user", {});
 }
 
-export function saveWhatsappGroup(groupJid, testConfirmed, alertStartHour) {
+export function saveWhatsappGroup(groupJid, testConfirmed, alertStartHour, alertDaysBefore) {
   return apiFetch("/api/whatsapp/group", {
     method: "PUT",
-    body: { groupJid, testConfirmed, alertStartHour },
+    body: { groupJid, testConfirmed, alertStartHour, alertDaysBefore },
   });
 }

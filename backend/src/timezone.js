@@ -23,3 +23,9 @@ export function addDaysToIso(isoDate, days) {
   date.setDate(date.getDate() + days);
   return date.toISOString().slice(0, 10);
 }
+
+export function daysBetweenIso(fromIso, toIso) {
+  const from = new Date(`${fromIso}T12:00:00`);
+  const to = new Date(`${toIso}T12:00:00`);
+  return Math.round((to - from) / (24 * 60 * 60 * 1000));
+}

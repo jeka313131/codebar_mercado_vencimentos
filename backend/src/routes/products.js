@@ -65,7 +65,7 @@ router.post("/upload-image", async (req, res) => {
   }
 
   try {
-    const url = await uploadProductImage(req.firebaseUser.uid, buffer, ext);
+    const url = await uploadProductImage(req.firebaseUser.uid, buffer, ext, type);
     res.json({ url });
   } catch (error) {
     res.status(500).json({ error: error.message });

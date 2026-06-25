@@ -11,6 +11,7 @@ function mapUser(row) {
     onboardingComplete: row.onboarding_complete,
     whatsappGroupId: row.whatsapp_group_id,
     alertStartHour: row.alert_start_hour ?? 8,
+    alertDaysBefore: row.alert_days_before ?? 7,
   };
 }
 
@@ -30,6 +31,7 @@ export async function upsertUser(fields) {
     onboarding_complete: fields.onboardingComplete ?? false,
     whatsapp_group_id: fields.whatsappGroupId ?? null,
     alert_start_hour: fields.alertStartHour ?? 8,
+    alert_days_before: fields.alertDaysBefore ?? 7,
   };
 
   const { error } = await supabase.from("users").upsert(row, { onConflict: "id" });
@@ -49,13 +51,17 @@ export async function updateUserPhone(uid, phone, firebaseUser) {
     onboardingComplete: true,
     whatsappGroupId: existing?.whatsappGroupId ?? null,
     alertStartHour: existing?.alertStartHour ?? 8,
+    alertDaysBefore: existing?.alertDaysBefore ?? 7,
   });
 }
 
-export async function updateWhatsappSettings(uid, { groupId, alertStartHour }) {
+export async function updateWhatsappSettings(uid, { groupId, alertStartHour, alertDaysBefore }) {
   const payload = { whatsapp_group_id: groupId };
   if (alertStartHour !== undefined) {
     payload.alert_start_hour = alertStartHour;
+  }
+  if (alertDaysBefore !== undefined) {
+    payload.alert_days_before = alertDaysBefore;
   }
 
   const { error } = await supabase.from("users").update(payload).eq("id", uid);

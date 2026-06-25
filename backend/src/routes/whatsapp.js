@@ -112,6 +112,7 @@ router.put("/group", requireFirebaseUser, async (req, res) => {
   const groupJid = String(req.body?.groupJid || "").trim();
   const testConfirmed = Boolean(req.body?.testConfirmed);
   const alertStartHour = Number(req.body?.alertStartHour);
+  const alertDaysBefore = Number(req.body?.alertDaysBefore);
 
   if (!groupJid) {
     res.status(400).json({ error: "Selecione um grupo." });
@@ -125,6 +126,11 @@ router.put("/group", requireFirebaseUser, async (req, res) => {
 
   if (!Number.isInteger(alertStartHour) || alertStartHour < 0 || alertStartHour > 23) {
     res.status(400).json({ error: "Selecione uma hora de início válida." });
+    return;
+  }
+
+  if (!Number.isInteger(alertDaysBefore) || alertDaysBefore < 1 || alertDaysBefore > 31) {
+    res.status(400).json({ error: "Selecione uma antecedência entre 1 e 31 dias." });
     return;
   }
 
@@ -144,8 +150,9 @@ router.put("/group", requireFirebaseUser, async (req, res) => {
     await updateWhatsappSettings(req.firebaseUser.uid, {
       groupId: groupJid,
       alertStartHour,
+      alertDaysBefore,
     });
-    res.json({ ok: true, whatsappGroupId: groupJid, alertStartHour });
+    res.json({ ok: true, whatsappGroupId: groupJid, alertStartHour, alertDaysBefore });
   } catch (error) {
     res.status(500).json({ error: error.message || "Não foi possível salvar o grupo." });
   }

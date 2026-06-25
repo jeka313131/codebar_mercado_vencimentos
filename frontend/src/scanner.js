@@ -180,9 +180,6 @@ export async function stopScanner() {
     video.srcObject = null;
   }
 
-  video?.removeAttribute("src");
-  video?.load();
-
   onCloseCallback?.();
 }
 
