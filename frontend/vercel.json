@@ -1,0 +1,8 @@
+{
+  "rewrites": [
+    {
+      "source": "/api/:path*",
+      "destination": "https://codebar-mercado-vencimentos.onrender.com/api/:path*"
+    }
+  ]
+}
