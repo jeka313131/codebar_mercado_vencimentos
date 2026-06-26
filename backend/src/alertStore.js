@@ -23,14 +23,13 @@ export async function listAllAlertUsers() {
 }
 
 export async function listProductsExpiringWithin(userId, today, maxDays) {
-  const minDate = addDaysToIso(today, 1);
   const maxDate = addDaysToIso(today, maxDays);
 
   const { data, error } = await supabase
     .from("products")
     .select("id, name, quantity, expiry_date")
     .eq("user_id", userId)
-    .gte("expiry_date", minDate)
+    .gte("expiry_date", today)
     .lte("expiry_date", maxDate)
     .order("expiry_date", { ascending: true });
 

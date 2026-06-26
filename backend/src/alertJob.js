@@ -9,16 +9,17 @@ import {
 import { sendWhatsAppToGroup } from "./evolution.js";
 import { getBrasiliaNow } from "./timezone.js";
 
-function formatDayLabel(days) {
-  if (days === 1) return "1 dia";
-  return `${days} dias`;
+function formatExpiryLabel(days) {
+  if (days === 0) return "vence hoje";
+  if (days === 1) return "vence em 1 dia";
+  return `vence em ${days} dias`;
 }
 
 function buildMessage(entries) {
   const header = "🔔 *Alerta Venceu*";
   const lines = entries.map(
     ({ product, daysBeforeExpiry }) =>
-      `• ${product.name} — vence em ${formatDayLabel(daysBeforeExpiry)} (qtd: ${product.quantity ?? 1})`,
+      `• ${product.name} — ${formatExpiryLabel(daysBeforeExpiry)} (qtd: ${product.quantity ?? 1})`,
   );
   return `${header}\n\n${lines.join("\n")}`;
 }
