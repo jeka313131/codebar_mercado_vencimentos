@@ -27,7 +27,7 @@ export async function listProductsExpiringWithin(userId, today, maxDays) {
 
   const { data, error } = await supabase
     .from("products")
-    .select("id, name, quantity, expiry_date")
+    .select("id, name, quantity, expiry_date, image_url")
     .eq("user_id", userId)
     .gte("expiry_date", today)
     .lte("expiry_date", maxDate)
@@ -65,17 +65,13 @@ export async function filterUnsentAlertEntries(entries) {
   );
 }
 
-export async function insertAlertLogs(userId, entries, message) {
-  if (!entries.length) return;
-
-  const rows = entries.map(({ product, daysBeforeExpiry }) => ({
+export async function insertAlertLog(userId, product, daysBeforeExpiry, message) {
+  const { error } = await supabase.from("alert_logs").insert({
     user_id: userId,
     product_id: product.id,
     days_before_expiry: daysBeforeExpiry,
     channel: "whatsapp",
     message,
-  }));
-
-  const { error } = await supabase.from("alert_logs").insert(rows);
+  });
   if (error) throw new Error(error.message);
 }

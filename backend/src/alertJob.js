@@ -1,27 +1,33 @@
 import {
   attachDaysRemaining,
   filterUnsentAlertEntries,
-  insertAlertLogs,
+  insertAlertLog,
   listAllAlertUsers,
   listProductsExpiringWithin,
   listUsersForAlertHour,
 } from "./alertStore.js";
-import { sendWhatsAppToGroup } from "./evolution.js";
+import { sendWhatsAppMediaToGroup, sendWhatsAppToGroup } from "./evolution.js";
 import { getBrasiliaNow } from "./timezone.js";
 
-function formatExpiryLabel(days) {
-  if (days === 0) return "vence hoje";
-  if (days === 1) return "vence em 1 dia";
-  return `vence em ${days} dias`;
+const SEND_DELAY_MS = 1500;
+
+function delay(ms) {
+  return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
-function buildMessage(entries) {
-  const header = "🔔 *Alerta Venceu*";
-  const lines = entries.map(
-    ({ product, daysBeforeExpiry }) =>
-      `• ${product.name} — ${formatExpiryLabel(daysBeforeExpiry)} (qtd: ${product.quantity ?? 1})`,
-  );
-  return `${header}\n\n${lines.join("\n")}`;
+function formatExpiryCount(days) {
+  if (days === 0) return "(HOJE)";
+  if (days === 1) return "(AMANHÃ)";
+  return `(em ${days} dias)`;
+}
+
+function formatDateBr(isoDate) {
+  const [, month, day] = isoDate.split("-");
+  return `${day}/${month}`;
+}
+
+function buildCaption({ product, daysBeforeExpiry }) {
+  return `Venc: ${formatDateBr(product.expiry_date)} ${formatExpiryCount(daysBeforeExpiry)} - ${product.name}`;
 }
 
 export async function runExpiryAlerts({ force = false } = {}) {
@@ -46,11 +52,27 @@ export async function runExpiryAlerts({ force = false } = {}) {
       const withDays = attachDaysRemaining(products, today);
       const pending = await filterUnsentAlertEntries(withDays);
 
-      if (pending.length) {
-        const message = buildMessage(pending);
-        await sendWhatsAppToGroup(user.whatsapp_group_id, message);
-        await insertAlertLogs(user.id, pending, message);
-        summary.messagesSent += 1;
+      for (const entry of pending) {
+        const caption = buildCaption(entry);
+        const imageUrl = entry.product.image_url;
+
+        try {
+          if (imageUrl) {
+            await sendWhatsAppMediaToGroup(user.whatsapp_group_id, imageUrl, caption);
+          } else {
+            await sendWhatsAppToGroup(user.whatsapp_group_id, caption);
+          }
+
+          await insertAlertLog(user.id, entry.product, entry.daysBeforeExpiry, caption);
+          summary.messagesSent += 1;
+          await delay(SEND_DELAY_MS);
+        } catch (error) {
+          summary.errors.push({
+            userId: user.id,
+            productId: entry.product.id,
+            error: error.message,
+          });
+        }
       }
     } catch (error) {
       summary.errors.push({ userId: user.id, error: error.message });

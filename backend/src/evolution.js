@@ -203,6 +203,24 @@ export async function sendWhatsAppToGroup(groupJid, message) {
   });
 }
 
+export async function sendWhatsAppMediaToGroup(groupJid, imageUrl, caption) {
+  const config = getEvolutionConfig();
+  if (!config) {
+    console.log(`[DEV WhatsApp] Grupo ${groupJid} (imagem ${imageUrl}): ${caption}`);
+    return { dev: true };
+  }
+
+  return evolutionApi(`/message/sendMedia/${encodeURIComponent(config.instance)}`, {
+    method: "POST",
+    body: {
+      number: groupJid,
+      mediatype: "image",
+      media: imageUrl,
+      caption,
+    },
+  });
+}
+
 export async function getInstanceConnectionState() {
   const config = getEvolutionConfig();
   if (!config) {
