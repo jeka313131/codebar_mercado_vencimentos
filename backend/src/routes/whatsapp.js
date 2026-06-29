@@ -112,7 +112,11 @@ router.put("/group", requireFirebaseUser, async (req, res) => {
   const groupJid = String(req.body?.groupJid || "").trim();
   const testConfirmed = Boolean(req.body?.testConfirmed);
   const alertStartHour = Number(req.body?.alertStartHour);
-  const alertDaysBefore = Number(req.body?.alertDaysBefore);
+  const alertMode = req.body?.alertMode === "milestones" ? "milestones" : "period";
+  const alertDaysBefore = alertMode === "period" ? Number(req.body?.alertDaysBefore) : undefined;
+  const rawMilestones = Array.isArray(req.body?.alertMilestones)
+    ? req.body.alertMilestones.map((value) => Number(value))
+    : [];
 
   if (!groupJid) {
     res.status(400).json({ error: "Selecione um grupo." });
@@ -129,9 +133,25 @@ router.put("/group", requireFirebaseUser, async (req, res) => {
     return;
   }
 
-  if (!Number.isInteger(alertDaysBefore) || alertDaysBefore < 1 || alertDaysBefore > 31) {
-    res.status(400).json({ error: "Selecione uma antecedência entre 1 e 31 dias." });
-    return;
+  if (alertMode === "period") {
+    if (!Number.isInteger(alertDaysBefore) || alertDaysBefore < 1 || alertDaysBefore > 31) {
+      res.status(400).json({ error: "Selecione uma antecedência entre 1 e 31 dias." });
+      return;
+    }
+  } else {
+    const allValid =
+      rawMilestones.length === 4 &&
+      rawMilestones.every((value) => Number.isInteger(value) && value >= 0 && value <= 30);
+    const strictlyDescending = rawMilestones.every(
+      (value, index) => index === 0 || value < rawMilestones[index - 1],
+    );
+
+    if (!allValid || !strictlyDescending) {
+      res.status(400).json({
+        error: "Preencha os 4 marcos em ordem decrescente (cada um menor que o anterior).",
+      });
+      return;
+    }
   }
 
   const user = await getUserById(req.firebaseUser.uid);
@@ -151,8 +171,16 @@ router.put("/group", requireFirebaseUser, async (req, res) => {
       groupId: groupJid,
       alertStartHour,
       alertDaysBefore,
+      alertMode,
+      alertMilestones: alertMode === "milestones" ? rawMilestones : undefined,
     });
-    res.json({ ok: true, whatsappGroupId: groupJid, alertStartHour, alertDaysBefore });
+    res.json({
+      ok: true,
+      whatsappGroupId: groupJid,
+      alertStartHour,
+      alertDaysBefore,
+      alertMode,
+    });
   } catch (error) {
     res.status(500).json({ error: error.message || "Não foi possível salvar o grupo." });
   }

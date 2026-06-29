@@ -13,6 +13,8 @@ export async function syncUserFromFirebase(firebaseUser) {
     whatsappGroupId: existing?.whatsappGroupId ?? null,
     alertStartHour: existing?.alertStartHour ?? 8,
     alertDaysBefore: existing?.alertDaysBefore ?? 7,
+    alertMode: existing?.alertMode ?? "period",
+    alertMilestones: existing?.alertMilestones ?? [10, 7, 3, 0],
   });
 }
 
@@ -29,5 +31,7 @@ export async function syncUserPhoneVerified(uid, phone, firebaseUser) {
     whatsappGroupId: existing?.whatsappGroupId ?? null,
     alertStartHour: existing?.alertStartHour ?? 8,
     alertDaysBefore: existing?.alertDaysBefore ?? 7,
+    alertMode: existing?.alertMode ?? "period",
+    alertMilestones: existing?.alertMilestones ?? [10, 7, 3, 0],
   });
 }

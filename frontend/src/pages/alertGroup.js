@@ -27,6 +27,23 @@ function renderDaysOptions(selected = 7) {
   }).join("");
 }
 
+const DEFAULT_MILESTONES = [10, 7, 3, 0];
+
+function milestoneLabel(days) {
+  if (days === 0) return "Hoje";
+  if (days === 1) return "1 dia";
+  return `${days} dias`;
+}
+
+function renderMilestoneOptions(minValue, maxValue, selected) {
+  const options = [];
+  for (let value = maxValue; value >= minValue; value -= 1) {
+    const sel = value === selected ? " selected" : "";
+    options.push(`<option value="${value}"${sel}>${milestoneLabel(value)}</option>`);
+  }
+  return options.join("");
+}
+
 export async function renderAlertGroup(container) {
   container.className = "page page-alert-group";
   container.innerHTML = `
@@ -66,11 +83,44 @@ export async function renderAlertGroup(container) {
       </select>
       <p class="alert-group-hint">Horário de Brasília. Alertas enviados diariamente nesta hora.</p>
 
-      <p class="alert-group-label">Alertar vencimento com antecedência de:</p>
-      <select id="alert-days-before" class="alert-group-select">
-        ${renderDaysOptions()}
-      </select>
-      <p class="alert-group-hint">Aviso diário de N dias antes até 1 dia antes do vencimento.</p>
+      <p class="alert-group-label">Modo de alerta</p>
+      <div class="alert-mode-toggle">
+        <label class="alert-mode-option">
+          <input type="radio" name="alert-mode" value="period" checked />
+          <span>Período</span>
+        </label>
+        <label class="alert-mode-option">
+          <input type="radio" name="alert-mode" value="milestones" />
+          <span>Marcos</span>
+        </label>
+      </div>
+
+      <div id="mode-period">
+        <p class="alert-group-label">Alertar vencimento com antecedência de:</p>
+        <select id="alert-days-before" class="alert-group-select">
+          ${renderDaysOptions()}
+        </select>
+        <p class="alert-group-hint">Aviso diário desde N dias antes até o dia do vencimento.</p>
+      </div>
+
+      <div id="mode-milestones" hidden>
+        <p class="alert-group-label">Avisar somente quando faltar:</p>
+        <div class="milestone-grid">
+          <select id="milestone-0" class="alert-group-select">
+            ${renderMilestoneOptions(3, 30, DEFAULT_MILESTONES[0])}
+          </select>
+          <select id="milestone-1" class="alert-group-select">
+            ${renderMilestoneOptions(2, DEFAULT_MILESTONES[0] - 1, DEFAULT_MILESTONES[1])}
+          </select>
+          <select id="milestone-2" class="alert-group-select">
+            ${renderMilestoneOptions(1, DEFAULT_MILESTONES[1] - 1, DEFAULT_MILESTONES[2])}
+          </select>
+          <select id="milestone-3" class="alert-group-select">
+            ${renderMilestoneOptions(0, DEFAULT_MILESTONES[2] - 1, DEFAULT_MILESTONES[3])}
+          </select>
+        </div>
+        <p class="alert-group-hint">Cada marco deve ser menor que o anterior. Avisa só nesses dias.</p>
+      </div>
 
       <div class="alert-group-actions">
         <button type="button" class="btn btn-cancel" id="btn-cancel">Cancelar</button>
@@ -88,6 +138,11 @@ export async function renderAlertGroup(container) {
   const groupSelect = container.querySelector("#group-select");
   const hourSelect = container.querySelector("#alert-start-hour");
   const daysSelect = container.querySelector("#alert-days-before");
+  const modePeriodBlock = container.querySelector("#mode-period");
+  const modeMilestonesBlock = container.querySelector("#mode-milestones");
+  const modeRadios = container.querySelectorAll('input[name="alert-mode"]');
+  const milestoneSelects = [0, 1, 2, 3].map((i) => container.querySelector(`#milestone-${i}`));
+  const milestoneMins = [3, 2, 1, 0];
   const statusDot = container.querySelector("#status-dot");
   const statusText = container.querySelector("#status-text");
   const btnTest = container.querySelector("#btn-test");
@@ -114,6 +169,33 @@ export async function renderAlertGroup(container) {
     btnTest.disabled = !groupSelect.value || !groupConnected;
     btnSave.disabled = !groupSelect.value || !groupConnected || !testSent;
   }
+
+  function getAlertMode() {
+    return container.querySelector('input[name="alert-mode"]:checked')?.value ?? "period";
+  }
+
+  function applyMode() {
+    const milestones = getAlertMode() === "milestones";
+    modeMilestonesBlock.hidden = !milestones;
+    modePeriodBlock.hidden = milestones;
+  }
+
+  function rebuildMilestonesFrom(startIndex) {
+    for (let i = Math.max(startIndex, 1); i < milestoneSelects.length; i += 1) {
+      const leftValue = Number(milestoneSelects[i - 1].value);
+      const maxValue = leftValue - 1;
+      const minValue = milestoneMins[i];
+      const current = Number(milestoneSelects[i].value);
+      const keep = current <= maxValue && current >= minValue ? current : maxValue;
+      milestoneSelects[i].innerHTML = renderMilestoneOptions(minValue, maxValue, keep);
+    }
+  }
+
+  milestoneSelects.forEach((select, index) => {
+    select.addEventListener("change", () => rebuildMilestonesFrom(index + 1));
+  });
+
+  modeRadios.forEach((radio) => radio.addEventListener("change", applyMode));
 
   async function loadInstance() {
     try {
@@ -213,8 +295,16 @@ export async function renderAlertGroup(container) {
 
     try {
       const alertStartHour = Number(hourSelect.value);
-      const alertDaysBefore = Number(daysSelect.value);
-      await saveWhatsappGroup(groupSelect.value, true, alertStartHour, alertDaysBefore);
+      const alertMode = getAlertMode();
+      const settings = { alertStartHour, alertMode };
+
+      if (alertMode === "milestones") {
+        settings.alertMilestones = milestoneSelects.map((s) => Number(s.value));
+      } else {
+        settings.alertDaysBefore = Number(daysSelect.value);
+      }
+
+      await saveWhatsappGroup(groupSelect.value, true, settings);
       await reloadAuthProfile();
       showFeedback("Grupo salvo com sucesso!", "success");
       setTimeout(() => navigate("/"), 1200);
@@ -238,6 +328,22 @@ export async function renderAlertGroup(container) {
     if (profile?.alertDaysBefore !== undefined) {
       daysSelect.value = String(profile.alertDaysBefore);
     }
+    if (Array.isArray(profile?.alertMilestones) && profile.alertMilestones.length === 4) {
+      const values = profile.alertMilestones;
+      milestoneSelects[0].innerHTML = renderMilestoneOptions(3, 30, values[0]);
+      for (let i = 1; i < milestoneSelects.length; i += 1) {
+        milestoneSelects[i].innerHTML = renderMilestoneOptions(
+          milestoneMins[i],
+          values[i - 1] - 1,
+          values[i],
+        );
+      }
+    }
+    if (profile?.alertMode === "milestones") {
+      const milestonesRadio = container.querySelector('input[name="alert-mode"][value="milestones"]');
+      if (milestonesRadio) milestonesRadio.checked = true;
+    }
+    applyMode();
   } catch {
     // perfil opcional na carga inicial
   }

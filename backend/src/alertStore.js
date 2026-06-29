@@ -1,10 +1,13 @@
 import { addDaysToIso, daysBetweenIso } from "./timezone.js";
 import { supabase } from "./supabase.js";
 
+const ALERT_USER_COLUMNS =
+  "id, whatsapp_group_id, alert_start_hour, alert_days_before, alert_mode, alert_milestones, display_name";
+
 export async function listUsersForAlertHour(hour) {
   const { data, error } = await supabase
     .from("users")
-    .select("id, whatsapp_group_id, alert_start_hour, alert_days_before, display_name")
+    .select(ALERT_USER_COLUMNS)
     .not("whatsapp_group_id", "is", null)
     .eq("alert_start_hour", hour);
 
@@ -15,7 +18,7 @@ export async function listUsersForAlertHour(hour) {
 export async function listAllAlertUsers() {
   const { data, error } = await supabase
     .from("users")
-    .select("id, whatsapp_group_id, alert_start_hour, alert_days_before, display_name")
+    .select(ALERT_USER_COLUMNS)
     .not("whatsapp_group_id", "is", null);
 
   if (error) throw new Error(error.message);

@@ -47,10 +47,18 @@ export async function runExpiryAlerts({ force = false } = {}) {
     summary.usersProcessed += 1;
 
     try {
-      const maxDays = user.alert_days_before ?? 7;
+      const isMilestones = user.alert_mode === "milestones";
+      const milestones = Array.isArray(user.alert_milestones) ? user.alert_milestones : [];
+      const maxDays = isMilestones
+        ? Math.max(...(milestones.length ? milestones : [0]))
+        : user.alert_days_before ?? 7;
+
       const products = await listProductsExpiringWithin(user.id, today, maxDays);
       const withDays = attachDaysRemaining(products, today);
-      const pending = await filterUnsentAlertEntries(withDays);
+      const matched = isMilestones
+        ? withDays.filter((entry) => milestones.includes(entry.daysBeforeExpiry))
+        : withDays;
+      const pending = await filterUnsentAlertEntries(matched);
 
       for (const entry of pending) {
         const caption = buildCaption(entry);

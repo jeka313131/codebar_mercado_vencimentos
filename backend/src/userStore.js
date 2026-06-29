@@ -12,6 +12,8 @@ function mapUser(row) {
     whatsappGroupId: row.whatsapp_group_id,
     alertStartHour: row.alert_start_hour ?? 8,
     alertDaysBefore: row.alert_days_before ?? 7,
+    alertMode: row.alert_mode ?? "period",
+    alertMilestones: row.alert_milestones ?? [10, 7, 3, 0],
   };
 }
 
@@ -32,6 +34,8 @@ export async function upsertUser(fields) {
     whatsapp_group_id: fields.whatsappGroupId ?? null,
     alert_start_hour: fields.alertStartHour ?? 8,
     alert_days_before: fields.alertDaysBefore ?? 7,
+    alert_mode: fields.alertMode ?? "period",
+    alert_milestones: fields.alertMilestones ?? [10, 7, 3, 0],
   };
 
   const { error } = await supabase.from("users").upsert(row, { onConflict: "id" });
@@ -52,16 +56,27 @@ export async function updateUserPhone(uid, phone, firebaseUser) {
     whatsappGroupId: existing?.whatsappGroupId ?? null,
     alertStartHour: existing?.alertStartHour ?? 8,
     alertDaysBefore: existing?.alertDaysBefore ?? 7,
+    alertMode: existing?.alertMode ?? "period",
+    alertMilestones: existing?.alertMilestones ?? [10, 7, 3, 0],
   });
 }
 
-export async function updateWhatsappSettings(uid, { groupId, alertStartHour, alertDaysBefore }) {
+export async function updateWhatsappSettings(
+  uid,
+  { groupId, alertStartHour, alertDaysBefore, alertMode, alertMilestones },
+) {
   const payload = { whatsapp_group_id: groupId };
   if (alertStartHour !== undefined) {
     payload.alert_start_hour = alertStartHour;
   }
   if (alertDaysBefore !== undefined) {
     payload.alert_days_before = alertDaysBefore;
+  }
+  if (alertMode !== undefined) {
+    payload.alert_mode = alertMode;
+  }
+  if (alertMilestones !== undefined) {
+    payload.alert_milestones = alertMilestones;
   }
 
   const { error } = await supabase.from("users").update(payload).eq("id", uid);
