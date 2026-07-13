@@ -27,7 +27,8 @@ function formatDateBr(isoDate) {
 }
 
 function buildCaption({ product, daysBeforeExpiry }) {
-  return `Venc: ${formatDateBr(product.expiry_date)} ${formatExpiryCount(daysBeforeExpiry)} - ${product.name}`;
+  const qty = product.quantity ?? 1;
+  return `Venc: ${formatDateBr(product.expiry_date)} ${formatExpiryCount(daysBeforeExpiry)} - ${product.name} - Qtd: ${qty}`;
 }
 
 export async function runExpiryAlerts({ force = false } = {}) {
