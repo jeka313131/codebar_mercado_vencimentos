@@ -1,5 +1,8 @@
 import { loginWithEmail, loginWithGoogle, registerWithEmail } from "../utils/firebase/auth.js";
 
+const EYE_OPEN = `<svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M12 4.5C7 4.5 2.7 7.6 1 12c1.7 4.4 6 7.5 11 7.5s9.3-3.1 11-7.5c-1.7-4.4-6-7.5-11-7.5zM12 17c-2.8 0-5-2.2-5-5s2.2-5 5-5 5 2.2 5 5-2.2 5-5 5zm0-8c-1.7 0-3 1.3-3 3s1.3 3 3 3 3-1.3 3-3-1.3-3-3-3z"/></svg>`;
+const EYE_OFF = `<svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M12 7c2.8 0 5 2.2 5 5 0 .7-.1 1.3-.4 1.9l2.9 2.9c1.5-1.3 2.7-3 3.5-4.8-1.7-4.4-6-7.5-11-7.5-1.4 0-2.8.3-4 .7l2.2 2.2C10.7 7.1 11.3 7 12 7zM2 4.3l2.3 2.3.5.5C3.6 8.3 2.2 10 1 12c1.7 4.4 6 7.5 11 7.5 1.6 0 3.1-.3 4.5-.9l.6.6 3.6 3.6 1.3-1.3L3.3 3 2 4.3zM12 17c-2.8 0-5-2.2-5-5 0-.7.2-1.4.5-2l1.5 1.5c-.1.2-.1.3-.1.5 0 1.7 1.3 3 3 3 .2 0 .3 0 .5-.1l1.5 1.5c-.6.3-1.3.5-2 .5zm2.9-5.1-3.8-3.8c.2 0 .3-.1.5-.1 1.7 0 3 1.3 3 3 0 .2 0 .3-.1.5l.4.4z"/></svg>`;
+
 export async function renderLogin(container) {
   container.className = "page page-auth";
   container.innerHTML = `
@@ -27,7 +30,12 @@ export async function renderLogin(container) {
         </div>
         <div class="field">
           <label for="auth-password">Senha</label>
-          <input id="auth-password" type="password" autocomplete="current-password" required minlength="6" placeholder="Mínimo 6 caracteres" />
+          <div class="password-field">
+            <input id="auth-password" type="password" autocomplete="current-password" required minlength="6" placeholder="Mínimo 6 caracteres" />
+            <button type="button" class="btn-password-toggle" id="btn-toggle-password" aria-label="Mostrar senha" aria-pressed="false">
+              ${EYE_OPEN}
+            </button>
+          </div>
         </div>
         <button type="submit" class="btn btn-primary" id="btn-email-submit">Entrar</button>
       </form>
@@ -42,6 +50,8 @@ export async function renderLogin(container) {
   const feedback = container.querySelector("#auth-feedback");
   const btnSubmit = container.querySelector("#btn-email-submit");
   const btnToggle = container.querySelector("#btn-toggle-mode");
+  const passwordInput = container.querySelector("#auth-password");
+  const btnTogglePassword = container.querySelector("#btn-toggle-password");
 
   function showFeedback(message, type = "error") {
     feedback.textContent = message;
@@ -49,10 +59,19 @@ export async function renderLogin(container) {
     feedback.hidden = false;
   }
 
+  btnTogglePassword.addEventListener("click", () => {
+    const showing = passwordInput.type === "text";
+    passwordInput.type = showing ? "password" : "text";
+    btnTogglePassword.setAttribute("aria-pressed", showing ? "false" : "true");
+    btnTogglePassword.setAttribute("aria-label", showing ? "Mostrar senha" : "Ocultar senha");
+    btnTogglePassword.innerHTML = showing ? EYE_OPEN : EYE_OFF;
+  });
+
   btnToggle.addEventListener("click", () => {
     isRegister = !isRegister;
     btnSubmit.textContent = isRegister ? "Criar conta" : "Entrar";
     btnToggle.textContent = isRegister ? "Já tenho conta" : "Criar conta";
+    passwordInput.autocomplete = isRegister ? "new-password" : "current-password";
     feedback.hidden = true;
   });
 
@@ -70,7 +89,7 @@ export async function renderLogin(container) {
     feedback.hidden = true;
 
     const email = container.querySelector("#auth-email").value;
-    const password = container.querySelector("#auth-password").value;
+    const password = passwordInput.value;
 
     btnSubmit.disabled = true;
 

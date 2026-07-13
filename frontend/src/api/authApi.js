@@ -8,12 +8,8 @@ export function fetchProfile() {
   return apiFetch("/api/auth/profile");
 }
 
-export function sendPhoneCode(phone) {
-  return authFetch("/api/auth/send-code", { phone });
-}
-
-export function verifyPhoneCode(phone, code) {
-  return authFetch("/api/auth/verify-code", { phone, code });
+export function savePhone(phone) {
+  return authFetch("/api/auth/phone", { phone });
 }
 
 export function syncUserToSupabase() {

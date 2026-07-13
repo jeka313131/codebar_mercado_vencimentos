@@ -10,6 +10,7 @@ import { renderAdd } from "./pages/add.js";
 import { renderLogin } from "./pages/login.js";
 import { renderVerifyPhone } from "./pages/verifyPhone.js";
 import { renderAlertGroup } from "./pages/alertGroup.js";
+import { renderProfile } from "./pages/profile.js";
 
 registerSW({ immediate: true });
 
@@ -19,6 +20,7 @@ registerRoute("/", renderHome);
 registerRoute("/estoque", renderStock);
 registerRoute("/adicionar", renderAdd);
 registerRoute("/grupo-alerta", renderAlertGroup);
+registerRoute("/perfil", renderProfile);
 
 initScanner();
 initSidebar();

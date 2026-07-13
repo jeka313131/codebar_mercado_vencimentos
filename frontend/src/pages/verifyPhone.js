@@ -1,4 +1,4 @@
-import { sendPhoneCode, verifyPhoneCode } from "../api/authApi.js";
+import { savePhone } from "../api/authApi.js";
 import { reloadAuthProfile } from "../auth/guard.js";
 import { logout } from "../utils/firebase/auth.js";
 
@@ -9,19 +9,19 @@ function maskPhoneInput(raw) {
   return `(${digits.slice(0, 2)}) ${digits.slice(2, 7)}-${digits.slice(7)}`;
 }
 
+/** Aceita só celular BR com 11 dígitos (DDD + 9 + 8). Retorna com prefixo 55. */
 function phoneToWaId(masked) {
   const digits = masked.replace(/\D/g, "");
-  if (digits.length < 10) return null;
-  const withCountry = digits.startsWith("55") ? digits : `55${digits}`;
-  return withCountry;
+  if (digits.length !== 11) return null;
+  return `55${digits}`;
 }
 
 export async function renderVerifyPhone(container) {
   container.className = "page page-auth";
   container.innerHTML = `
     <div class="auth-card">
-      <h1 class="auth-title">Confirme seu WhatsApp</h1>
-      <p class="auth-subtitle">Enviaremos um código para validar seu número</p>
+      <h1 class="auth-title">Seu WhatsApp</h1>
+      <p class="auth-subtitle">Informe o número com DDD (11 dígitos)</p>
 
       <div class="field">
         <label for="phone-input">WhatsApp</label>
@@ -34,20 +34,7 @@ export async function renderVerifyPhone(container) {
         />
       </div>
 
-      <button type="button" class="btn btn-primary" id="btn-send-code">Enviar código</button>
-
-      <div class="field auth-code-field" id="code-section" hidden>
-        <label for="code-input">Código de 6 dígitos</label>
-        <input
-          id="code-input"
-          type="text"
-          inputmode="numeric"
-          maxlength="6"
-          placeholder="000000"
-          autocomplete="one-time-code"
-        />
-        <button type="button" class="btn btn-primary" id="btn-verify-code">Confirmar</button>
-      </div>
+      <button type="button" class="btn btn-primary" id="btn-save-phone">Continuar</button>
 
       <p id="verify-feedback" class="feedback" hidden></p>
       <button type="button" class="btn-link" id="btn-logout">Sair da conta</button>
@@ -55,11 +42,8 @@ export async function renderVerifyPhone(container) {
   `;
 
   const phoneInput = container.querySelector("#phone-input");
-  const codeSection = container.querySelector("#code-section");
-  const codeInput = container.querySelector("#code-input");
   const feedback = container.querySelector("#verify-feedback");
-  const btnSend = container.querySelector("#btn-send-code");
-  const btnVerify = container.querySelector("#btn-verify-code");
+  const btnSave = container.querySelector("#btn-save-phone");
 
   function showFeedback(message, type = "error") {
     feedback.textContent = message;
@@ -72,51 +56,22 @@ export async function renderVerifyPhone(container) {
     if (masked !== phoneInput.value) phoneInput.value = masked;
   });
 
-  btnSend.addEventListener("click", async () => {
+  btnSave.addEventListener("click", async () => {
     feedback.hidden = true;
     const waId = phoneToWaId(phoneInput.value);
     if (!waId) {
-      showFeedback("Informe um WhatsApp válido com DDD.");
+      showFeedback("Informe um WhatsApp com 11 dígitos (DDD + número).");
       return;
     }
 
-    btnSend.disabled = true;
+    btnSave.disabled = true;
 
     try {
-      const result = await sendPhoneCode(waId);
-      codeSection.hidden = false;
-      codeInput.focus();
-      showFeedback(
-        result.devCode
-          ? `Modo dev: código ${result.devCode}`
-          : "Código enviado no seu WhatsApp.",
-        "success",
-      );
-    } catch (error) {
-      showFeedback(error.message);
-    } finally {
-      btnSend.disabled = false;
-    }
-  });
-
-  btnVerify.addEventListener("click", async () => {
-    feedback.hidden = true;
-    const waId = phoneToWaId(phoneInput.value);
-    const code = codeInput.value.trim();
-
-    if (!waId || code.length !== 6) {
-      showFeedback("Informe o WhatsApp e o código de 6 dígitos.");
-      return;
-    }
-
-    btnVerify.disabled = true;
-
-    try {
-      await verifyPhoneCode(waId, code);
+      await savePhone(waId);
       await reloadAuthProfile();
     } catch (error) {
       showFeedback(error.message);
-      btnVerify.disabled = false;
+      btnSave.disabled = false;
     }
   });
 

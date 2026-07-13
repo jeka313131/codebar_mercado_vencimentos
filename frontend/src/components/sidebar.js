@@ -15,6 +15,9 @@ function ensureSidebar() {
         <button type="button" class="sidebar-link" id="sidebar-alert-group">
           Grupo de alerta
         </button>
+        <button type="button" class="sidebar-link" id="sidebar-profile">
+          Perfil
+        </button>
       </nav>
     </aside>
   `;
@@ -25,6 +28,10 @@ function ensureSidebar() {
   sidebarEl.querySelector("#sidebar-alert-group").addEventListener("click", () => {
     closeSidebar();
     navigate("/grupo-alerta");
+  });
+  sidebarEl.querySelector("#sidebar-profile").addEventListener("click", () => {
+    closeSidebar();
+    navigate("/perfil");
   });
 
   return sidebarEl;

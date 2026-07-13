@@ -1,8 +1,51 @@
 import https from "node:https";
 
-function normalizePhone(phone) {
-  const digits = String(phone).replace(/\D/g, "");
-  if (digits.length < 12) return null;
+/** Celular BR: 55 + DDD (2) + 9 + 8 dígitos → 13 dígitos. Insere o 9 se vier com 10 dígitos locais. */
+export function normalizeBrWhatsAppPhone(phone, { log = true } = {}) {
+  const raw = String(phone);
+  let digits = raw.replace(/\D/g, "");
+
+  if (log) {
+    console.log("[phone:normalize] entrada:", { raw, digits, length: digits.length });
+  }
+
+  if (digits.length < 10) {
+    if (log) console.log("[phone:normalize] rejeitado: menos de 10 dígitos");
+    return null;
+  }
+
+  if (!digits.startsWith("55")) {
+    const before = digits;
+    digits = `55${digits}`;
+    if (log) console.log("[phone:normalize] prefixo 55 adicionado:", { before, after: digits });
+  }
+
+  let local = digits.slice(2);
+  if (local.length === 10) {
+    const before = digits;
+    digits = `55${local.slice(0, 2)}9${local.slice(2)}`;
+    local = digits.slice(2);
+    if (log) {
+      console.log("[phone:normalize] 9 do celular inserido:", {
+        before,
+        after: digits,
+        local,
+      });
+    }
+  }
+
+  if (local.length !== 11 || local[2] !== "9") {
+    if (log) {
+      console.log("[phone:normalize] rejeitado: formato inválido", {
+        local,
+        localLength: local.length,
+        thirdDigit: local[2],
+      });
+    }
+    return null;
+  }
+
+  if (log) console.log("[phone:normalize] resultado:", digits);
   return digits;
 }
 
@@ -173,21 +216,39 @@ async function evolutionApi(path, options = {}) {
 }
 
 export async function sendWhatsAppText(phone, message) {
-  const waPhone = normalizePhone(phone);
+  console.log("[phone:evolution] sendWhatsAppText chamado:", { phoneRecebido: phone });
+
+  const waPhone = normalizeBrWhatsAppPhone(phone);
   if (!waPhone) {
+    console.log("[phone:evolution] número inválido após normalização:", phone);
     throw new Error("Número de WhatsApp inválido.");
   }
 
+  const waJid = `${waPhone}@s.whatsapp.net`;
+
   const config = getEvolutionConfig();
   if (!config) {
-    console.log(`[DEV WhatsApp] Para ${waPhone}: ${message}`);
+    console.log(`[phone:evolution] DEV mode — para ${waJid}: ${message}`);
     return { dev: true };
   }
 
-  return evolutionApi(`/message/sendText/${encodeURIComponent(config.instance)}`, {
-    method: "POST",
-    body: { number: waPhone, text: message },
+  const requestBody = { number: waJid, text: message };
+  const path = `/message/sendText/${encodeURIComponent(config.instance)}`;
+
+  console.log("[phone:evolution] enviando para API:", {
+    url: `${config.baseUrl}${path}`,
+    instance: config.instance,
+    body: requestBody,
   });
+
+  const response = await evolutionApi(path, {
+    method: "POST",
+    body: requestBody,
+  });
+
+  console.log("[phone:evolution] resposta da API:", JSON.stringify(response));
+
+  return response;
 }
 
 export async function sendWhatsAppToGroup(groupJid, message) {
