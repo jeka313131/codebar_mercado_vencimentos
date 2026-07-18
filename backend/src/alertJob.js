@@ -1,6 +1,7 @@
 import {
   attachDaysRemaining,
   filterUnsentAlertEntries,
+  getAlertUserById,
   insertAlertLog,
   listAllAlertUsers,
   listProductsExpiringWithin,
@@ -31,14 +32,30 @@ function buildCaption({ product, daysBeforeExpiry }) {
   return `Venc: ${formatDateBr(product.expiry_date)} ${formatExpiryCount(daysBeforeExpiry)} - ${product.name} - Qtd: ${qty}`;
 }
 
-export async function runExpiryAlerts({ force = false } = {}) {
+export async function runExpiryAlerts({ force = false, userId = null } = {}) {
   const { hour, date: today } = getBrasiliaNow();
-  const users = force ? await listAllAlertUsers() : await listUsersForAlertHour(hour);
+
+  let users;
+  if (userId) {
+    const user = await getAlertUserById(userId);
+    if (!user) {
+      throw new Error("Usuário não encontrado.");
+    }
+    if (!user.whatsapp_group_id) {
+      throw new Error("Usuário sem grupo de WhatsApp configurado.");
+    }
+    users = [user];
+  } else if (force) {
+    users = await listAllAlertUsers();
+  } else {
+    users = await listUsersForAlertHour(hour);
+  }
 
   const summary = {
     hour,
     today,
     timezone: "America/Sao_Paulo",
+    userId: userId || null,
     usersProcessed: 0,
     messagesSent: 0,
     errors: [],

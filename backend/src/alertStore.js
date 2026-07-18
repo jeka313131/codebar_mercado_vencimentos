@@ -25,6 +25,17 @@ export async function listAllAlertUsers() {
   return data ?? [];
 }
 
+export async function getAlertUserById(userId) {
+  const { data, error } = await supabase
+    .from("users")
+    .select(ALERT_USER_COLUMNS)
+    .eq("id", userId)
+    .maybeSingle();
+
+  if (error) throw new Error(error.message);
+  return data;
+}
+
 export async function listProductsExpiringWithin(userId, today, maxDays) {
   const maxDate = addDaysToIso(today, maxDays);
 

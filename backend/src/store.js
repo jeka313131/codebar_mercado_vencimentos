@@ -1,5 +1,6 @@
 import { mapProduct, supabase } from "./supabase.js";
 import { addDaysToIso, getBrasiliaNow } from "./timezone.js";
+import { compressProductImage } from "./imageCompress.js";
 
 const PRODUCT_COLUMNS =
   "id, barcode, name, expiry_date, quantity, image_url, created_at, user_id";
@@ -108,14 +109,14 @@ export async function removeProduct(userId, id) {
   if (error) throw new Error(error.message);
 }
 
-export async function uploadProductImage(userId, buffer, ext, contentType) {
-  const fileName = `${userId}/${crypto.randomUUID()}.${ext}`;
-  const mimeType = contentType || `image/${ext === "jpg" ? "jpeg" : ext}`;
+export async function uploadProductImage(userId, buffer) {
+  const compressed = await compressProductImage(buffer);
+  const fileName = `${userId}/${crypto.randomUUID()}.jpg`;
 
-  const { error } = await supabase.storage.from("product-images").upload(fileName, buffer, {
+  const { error } = await supabase.storage.from("product-images").upload(fileName, compressed.buffer, {
     cacheControl: "3600",
     upsert: false,
-    contentType: mimeType,
+    contentType: "image/jpeg",
   });
 
   if (error) throw new Error(error.message);

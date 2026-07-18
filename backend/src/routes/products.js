@@ -56,7 +56,6 @@ router.post("/upload-image", async (req, res) => {
     return;
   }
 
-  const ext = type.split("/")[1] || "jpg";
   const buffer = Buffer.from(data, "base64");
 
   if (buffer.length > 5 * 1024 * 1024) {
@@ -65,7 +64,7 @@ router.post("/upload-image", async (req, res) => {
   }
 
   try {
-    const url = await uploadProductImage(req.firebaseUser.uid, buffer, ext, type);
+    const url = await uploadProductImage(req.firebaseUser.uid, buffer);
     res.json({ url });
   } catch (error) {
     res.status(500).json({ error: error.message });

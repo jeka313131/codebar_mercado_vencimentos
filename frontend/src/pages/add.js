@@ -52,6 +52,67 @@ function consumeScanOnce() {
   return false;
 }
 
+function batchRowHtml(index, { quantity = "", expiryText = "", expiryNative = "" } = {}) {
+  return `
+    <div class="batch-row" data-batch-index="${index}">
+      <div class="batch-row-header">
+        <span class="batch-row-label">Lote ${index + 1}</span>
+        <button type="button" class="btn-batch-remove" data-remove-batch aria-label="Remover lote" hidden>Remover</button>
+      </div>
+      <div class="batch-row-fields">
+        <div class="field batch-qty-field">
+          <label>Quantidade</label>
+          <input
+            type="number"
+            min="1"
+            inputmode="numeric"
+            class="batch-quantity"
+            placeholder="Ex.: 5"
+            value="${escapeHtml(String(quantity))}"
+          />
+        </div>
+        <div class="field batch-date-field">
+          <label>Vencimento</label>
+          <div class="date-field-row">
+            <input
+              type="text"
+              inputmode="numeric"
+              class="batch-expiry-text"
+              placeholder="DD/MM/AAAA"
+              autocomplete="off"
+              maxlength="10"
+              value="${escapeHtml(expiryText)}"
+            />
+            <button type="button" class="btn-date-pick" data-date-pick title="Abrir calendário" aria-label="Abrir calendário">
+              <svg class="btn-date-pick-icon" viewBox="0 0 24 24" aria-hidden="true">
+                <rect x="3" y="4" width="18" height="18" rx="2" fill="none" stroke="currentColor" stroke-width="2"/>
+                <path d="M16 2v4M8 2v4M3 10h18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+              </svg>
+            </button>
+            <input type="date" class="date-input-native-hidden batch-expiry-native" value="${escapeHtml(expiryNative)}" tabindex="-1" aria-hidden="true" />
+          </div>
+        </div>
+      </div>
+    </div>
+  `;
+}
+
+function parseBatchRow(row) {
+  const quantity = row.querySelector(".batch-quantity")?.value.trim() || "";
+  const expiryText = row.querySelector(".batch-expiry-text")?.value.trim() || "";
+  const expiryNative = row.querySelector(".batch-expiry-native")?.value || "";
+  const expiryDate = parseDateBrToIso(expiryText) || expiryNative || null;
+  const hasQty = Boolean(quantity);
+  const hasDate = Boolean(expiryText || expiryNative);
+  const qtyOk = hasQty && Number(quantity) >= 1;
+  const dateOk = Boolean(expiryDate);
+  const empty = !hasQty && !hasDate;
+  const complete = qtyOk && dateOk;
+  const incomplete = !empty && !complete;
+
+  return { quantity, expiryText, expiryNative, expiryDate, empty, complete, incomplete };
+}
+
 export async function renderAdd(container) {
   container.className = "page page-add";
   container.innerHTML = `
@@ -94,29 +155,8 @@ export async function renderAdd(container) {
       </div>
 
       <div class="field">
-        <label for="quantity">Quantidade</label>
-        <input id="quantity" type="number" min="1" inputmode="numeric" placeholder="Ex.: 5" />
-      </div>
-
-      <div class="field">
-        <label for="expiry-date-text">Data de vencimento</label>
-        <div class="date-field-row">
-          <input
-            id="expiry-date-text"
-            type="text"
-            inputmode="numeric"
-            placeholder="DD/MM/AAAA"
-            autocomplete="off"
-            maxlength="10"
-          />
-          <button type="button" class="btn-date-pick" id="btn-date-pick" title="Abrir calendário" aria-label="Abrir calendário">
-            <svg class="btn-date-pick-icon" viewBox="0 0 24 24" aria-hidden="true">
-              <rect x="3" y="4" width="18" height="18" rx="2" fill="none" stroke="currentColor" stroke-width="2"/>
-              <path d="M16 2v4M8 2v4M3 10h18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
-            </svg>
-          </button>
-          <input id="expiry-date-native" type="date" class="date-input-native-hidden" tabindex="-1" aria-hidden="true" />
-        </div>
+        <label>Lotes (quantidade e vencimento)</label>
+        <div id="batches-list" class="batches-list"></div>
       </div>
 
       <button type="button" id="btn-save" class="btn btn-primary">Salvar produto</button>
@@ -130,9 +170,7 @@ export async function renderAdd(container) {
   const barcodeInput = container.querySelector("#barcode");
   const nameInput = container.querySelector("#product-name");
   const nameList = container.querySelector("#product-name-list");
-  const quantityInput = container.querySelector("#quantity");
-  const expiryText = container.querySelector("#expiry-date-text");
-  const expiryNative = container.querySelector("#expiry-date-native");
+  const batchesList = container.querySelector("#batches-list");
   const photoPreview = container.querySelector("#photo-preview");
   const feedback = container.querySelector("#feedback");
   const btnSave = container.querySelector("#btn-save");
@@ -153,33 +191,149 @@ export async function renderAdd(container) {
     feedback.hidden = false;
   }
 
-  function getExpiryIso() {
-    return parseDateBrToIso(expiryText.value) || expiryNative.value || null;
+  function getBatchRows() {
+    return [...batchesList.querySelectorAll(".batch-row")];
   }
 
   function saveFormDraft() {
     writeDraft({
       barcode: barcodeInput.value,
       name: nameInput.value,
-      quantity: quantityInput.value,
-      expiryText: expiryText.value,
-      expiryNative: expiryNative.value,
       catalogImageUrl,
+      batches: getBatchRows().map((row) => {
+        const b = parseBatchRow(row);
+        return {
+          quantity: b.quantity,
+          expiryText: b.expiryText,
+          expiryNative: b.expiryNative,
+        };
+      }),
     });
+  }
+
+  function updateBatchUi() {
+    const rows = getBatchRows();
+    rows.forEach((row, index) => {
+      row.dataset.batchIndex = String(index);
+      const label = row.querySelector(".batch-row-label");
+      if (label) label.textContent = `Lote ${index + 1}`;
+      const removeBtn = row.querySelector("[data-remove-batch]");
+      if (removeBtn) removeBtn.hidden = rows.length <= 1;
+    });
+
+    const last = rows[rows.length - 1];
+    if (last && parseBatchRow(last).complete) {
+      addBatchRow();
+    }
+  }
+
+  function bindBatchRow(row) {
+    const quantityInput = row.querySelector(".batch-quantity");
+    const expiryText = row.querySelector(".batch-expiry-text");
+    const expiryNative = row.querySelector(".batch-expiry-native");
+    const datePick = row.querySelector("[data-date-pick]");
+    const removeBtn = row.querySelector("[data-remove-batch]");
+
+    quantityInput?.addEventListener("input", () => {
+      updateBatchUi();
+      saveFormDraft();
+    });
+
+    expiryText?.addEventListener("input", () => {
+      const masked = maskDateBrInput(expiryText.value);
+      if (masked !== expiryText.value) expiryText.value = masked;
+      const iso = parseDateBrToIso(expiryText.value);
+      if (iso) expiryNative.value = iso;
+      updateBatchUi();
+      saveFormDraft();
+    });
+
+    expiryNative?.addEventListener("change", () => {
+      if (expiryNative.value) {
+        expiryText.value = isoToDateBrFull(expiryNative.value);
+      }
+      updateBatchUi();
+      saveFormDraft();
+    });
+
+    datePick?.addEventListener("click", () => {
+      if (typeof expiryNative.showPicker === "function") {
+        expiryNative.showPicker();
+        return;
+      }
+      expiryNative.click();
+    });
+
+    removeBtn?.addEventListener("click", () => {
+      if (getBatchRows().length <= 1) return;
+      row.remove();
+      updateBatchUi();
+      saveFormDraft();
+    });
+  }
+
+  function addBatchRow(data = {}) {
+    const index = getBatchRows().length;
+    batchesList.insertAdjacentHTML("beforeend", batchRowHtml(index, data));
+    const row = batchesList.lastElementChild;
+    if (row) bindBatchRow(row);
+    updateBatchUi();
+  }
+
+  function collectBatchesForSave() {
+    const rows = getBatchRows();
+    const complete = [];
+    let incompleteIndex = -1;
+
+    for (let i = 0; i < rows.length; i += 1) {
+      const batch = parseBatchRow(rows[i]);
+      const isLast = i === rows.length - 1;
+
+      if (batch.empty) {
+        if (isLast) continue;
+        incompleteIndex = i;
+        break;
+      }
+
+      if (batch.incomplete) {
+        incompleteIndex = i;
+        break;
+      }
+
+      if (batch.complete) {
+        complete.push(batch);
+      }
+    }
+
+    return { complete, incompleteIndex };
   }
 
   function restoreFormDraft() {
     const draft = readDraft();
-    if (!draft) return;
+    if (!draft) {
+      addBatchRow();
+      return;
+    }
+
     barcodeInput.value = draft.barcode || "";
     nameInput.value = draft.name || "";
-    quantityInput.value = draft.quantity || "";
-    expiryText.value = draft.expiryText || "";
-    expiryNative.value = draft.expiryNative || "";
     if (draft.catalogImageUrl) {
       catalogImageUrl = draft.catalogImageUrl;
       photoPreview.src = draft.catalogImageUrl;
     }
+
+    const batches = Array.isArray(draft.batches) && draft.batches.length
+      ? draft.batches
+      : [
+          {
+            quantity: draft.quantity || "",
+            expiryText: draft.expiryText || "",
+            expiryNative: draft.expiryNative || "",
+          },
+        ];
+
+    batches.forEach((batch) => addBatchRow(batch));
+    updateBatchUi();
   }
 
   function applyCatalogEntry(entry) {
@@ -231,7 +385,7 @@ export async function renderAdd(container) {
         handleBarcodeLookup();
         saveFormDraft();
         if (!findByBarcode(catalog, code)) {
-          quantityInput.focus();
+          getBatchRows()[0]?.querySelector(".batch-quantity")?.focus();
         }
       },
     });
@@ -280,55 +434,31 @@ export async function renderAdd(container) {
     if (!event.target.closest("#name-combobox")) hideNameDropdown();
   });
 
-  quantityInput.addEventListener("input", () => saveFormDraft());
-
-  expiryText.addEventListener("input", () => {
-    const masked = maskDateBrInput(expiryText.value);
-    if (masked !== expiryText.value) {
-      expiryText.value = masked;
-    }
-    const iso = parseDateBrToIso(expiryText.value);
-    if (iso) expiryNative.value = iso;
-    saveFormDraft();
-  });
-
-  expiryNative.addEventListener("change", () => {
-    if (expiryNative.value) {
-      expiryText.value = isoToDateBrFull(expiryNative.value);
-    }
-    saveFormDraft();
-  });
-
-  container.querySelector("#btn-date-pick").addEventListener("click", () => {
-    if (typeof expiryNative.showPicker === "function") {
-      expiryNative.showPicker();
-      return;
-    }
-    expiryNative.click();
-  });
-
   btnSave.addEventListener("click", async () => {
     feedback.hidden = true;
 
     const barcode = barcodeInput.value.trim();
     const name = nameInput.value.trim();
-    const expiryDate = getExpiryIso();
-    const quantity = quantityInput.value.trim();
 
     if (!barcode || !name) {
       showFeedback("Preencha código e descrição.", "error");
       return;
     }
 
-    if (!expiryDate) {
-      showFeedback("Informe a data no formato DD/MM/AAAA.", "error");
-      expiryText.focus();
+    const { complete, incompleteIndex } = collectBatchesForSave();
+
+    if (incompleteIndex >= 0) {
+      showFeedback(
+        `Lote ${incompleteIndex + 1} incompleto. Preencha quantidade e vencimento ou remova o lote.`,
+        "error",
+      );
+      getBatchRows()[incompleteIndex]?.querySelector(".batch-quantity")?.focus();
       return;
     }
 
-    if (!quantity || Number(quantity) < 1) {
-      showFeedback("Informe a quantidade.", "error");
-      quantityInput.focus();
+    if (!complete.length) {
+      showFeedback("Informe pelo menos um lote com quantidade e vencimento.", "error");
+      getBatchRows()[0]?.querySelector(".batch-quantity")?.focus();
       return;
     }
 
@@ -340,7 +470,16 @@ export async function renderAdd(container) {
         imageUrl = await uploadProductImage(selectedPhoto);
       }
 
-      await saveProduct({ barcode, name, expiryDate, quantity, imageUrl });
+      for (const batch of complete) {
+        await saveProduct({
+          barcode,
+          name,
+          expiryDate: batch.expiryDate,
+          quantity: batch.quantity,
+          imageUrl,
+        });
+      }
+
       clearDraft();
       navigate("/");
     } catch (error) {

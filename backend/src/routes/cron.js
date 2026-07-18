@@ -23,9 +23,15 @@ function requireCronSecret(req, res, next) {
 }
 
 router.post("/send-alerts", requireCronSecret, async (req, res) => {
+  const userId = String(req.query.userId || req.body?.userId || "").trim();
+  if (!userId) {
+    res.status(400).json({ error: "Informe userId (obrigatório)." });
+    return;
+  }
+
   try {
     const force = req.query.force === "true" || req.body?.force === true;
-    const summary = await runExpiryAlerts({ force });
+    const summary = await runExpiryAlerts({ force, userId });
     res.json(summary);
   } catch (error) {
     res.status(500).json({ error: error.message || "Falha ao executar alertas." });
