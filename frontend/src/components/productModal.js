@@ -28,7 +28,7 @@ export function openProductModal(product, { onUpdated, onDeleted } = {}) {
         <div class="field">
           <label for="modal-photo-preview">Foto</label>
           <img id="modal-photo-preview" class="photo-preview" src="${escapeHtml(product.imageUrl)}" alt="" />
-          <input id="modal-photo" type="file" accept="image/*" capture="environment" class="photo-input" />
+          <input id="modal-photo" type="file" accept="image/*" class="photo-input" />
           <label for="modal-photo" class="btn btn-secondary btn--compact">Tirar / escolher foto</label>
         </div>
         <div class="field">

@@ -39,6 +39,11 @@ export function initBottomNav(container, { navigate }) {
   });
 
   container.querySelector("#nav-add")?.addEventListener("click", () => {
-    navigate("/adicionar?scan=1");
+    try {
+      sessionStorage.setItem("openScanOnce", "1");
+    } catch {
+      // ignore
+    }
+    navigate("/adicionar");
   });
 }
