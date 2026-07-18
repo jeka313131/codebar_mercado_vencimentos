@@ -6,7 +6,8 @@ import {
 } from "../api.js";
 import { renderBottomNav, initBottomNav } from "../components/bottomNav.js";
 import { navigate } from "../router.js";
-import { startScanner } from "../scanner.js";
+import { startScanner, stopScanner } from "../scanner.js";
+import { startPhotoCapture, stopPhotoCapture } from "../photoCapture.js";
 import { debounce, findByBarcode, searchByName } from "../utils/catalog.js";
 import { isoToDateBrFull, maskDateBrInput, parseDateBrToIso } from "../utils/dates.js";
 import { escapeHtml } from "../utils/html.js";
@@ -61,16 +62,10 @@ export async function renderAdd(container) {
 
     <main class="form-card">
       <div class="field">
-        <label for="product-photo">Foto do produto</label>
+        <label for="photo-preview">Foto do produto</label>
         <div class="photo-picker">
           <img id="photo-preview" class="photo-preview" src="${getPlaceholderImage()}" alt="Prévia da foto" />
-          <input
-            id="product-photo"
-            type="file"
-            accept="image/*"
-            class="photo-input"
-          />
-          <label for="product-photo" class="btn btn-secondary">Tirar / escolher foto</label>
+          <button type="button" class="btn btn-secondary" id="btn-take-photo">Tirar foto</button>
         </div>
       </div>
 
@@ -138,7 +133,6 @@ export async function renderAdd(container) {
   const quantityInput = container.querySelector("#quantity");
   const expiryText = container.querySelector("#expiry-date-text");
   const expiryNative = container.querySelector("#expiry-date-native");
-  const photoInput = container.querySelector("#product-photo");
   const photoPreview = container.querySelector("#photo-preview");
   const feedback = container.querySelector("#feedback");
   const btnSave = container.querySelector("#btn-save");
@@ -195,7 +189,6 @@ export async function renderAdd(container) {
     photoPreview.src = entry.imageUrl;
     catalogImageUrl = entry.imageUrl !== getPlaceholderImage() ? entry.imageUrl : null;
     selectedPhoto = null;
-    photoInput.value = "";
     hideNameDropdown();
     saveFormDraft();
   }
@@ -231,6 +224,7 @@ export async function renderAdd(container) {
   }
 
   function openScanner() {
+    stopPhotoCapture();
     startScanner({
       onScan: (code) => {
         barcodeInput.value = code;
@@ -250,17 +244,17 @@ export async function renderAdd(container) {
     navigate("/");
   });
 
-  photoInput.addEventListener("click", () => {
+  container.querySelector("#btn-take-photo").addEventListener("click", async () => {
     saveFormDraft();
-  });
-
-  photoInput.addEventListener("change", () => {
-    const file = photoInput.files?.[0];
-    if (!file) return;
-    selectedPhoto = file;
-    catalogImageUrl = null;
-    photoPreview.src = URL.createObjectURL(file);
-    saveFormDraft();
+    await stopScanner();
+    startPhotoCapture({
+      onCapture: (file) => {
+        selectedPhoto = file;
+        catalogImageUrl = null;
+        photoPreview.src = URL.createObjectURL(file);
+        saveFormDraft();
+      },
+    });
   });
 
   container.querySelector("#btn-scan").addEventListener("click", openScanner);

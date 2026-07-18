@@ -4,6 +4,7 @@ import { ensureUserProfile, isOnboardingComplete } from "./profile.js";
 import { getPath, navigate, renderRoute } from "../router.js";
 import { closeSidebar } from "../components/sidebar.js";
 import { stopScanner } from "../scanner.js";
+import { stopPhotoCapture } from "../photoCapture.js";
 
 const PUBLIC_ROUTES = new Set(["/login", "/verificar-telefone"]);
 
@@ -69,6 +70,7 @@ export function initAuthGuard() {
   window.addEventListener("hashchange", () => {
     closeSidebar();
     stopScanner();
+    stopPhotoCapture();
     routeByAuthState();
   });
 }

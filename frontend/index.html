@@ -56,6 +56,33 @@
       </div>
     </section>
 
+    <section id="photo-capture-panel" class="photo-capture-panel" aria-hidden="true">
+      <div class="photo-capture-header">
+        <h2>Foto do produto</h2>
+      </div>
+      <p id="photo-capture-status" class="photo-capture-status">Iniciando câmera…</p>
+      <div class="photo-capture-viewport">
+        <video id="photo-capture-video" playsinline webkit-playsinline muted autoplay></video>
+        <div class="photo-capture-controls">
+          <button
+            type="button"
+            id="btn-cancel-photo-capture"
+            class="scanner-fab scanner-fab--cancel"
+            aria-label="Cancelar foto"
+          >
+            ✕
+          </button>
+          <button type="button" id="btn-photo-shutter" class="photo-capture-shutter" aria-label="Tirar foto">
+            <span class="photo-capture-shutter-ring"></span>
+          </button>
+          <button type="button" id="btn-photo-gallery" class="scanner-btn-type" aria-label="Escolher da galeria">
+            Galeria
+          </button>
+        </div>
+      </div>
+      <input id="photo-capture-gallery" type="file" accept="image/*" class="photo-input" hidden />
+    </section>
+
     <script type="module" src="/src/main.js"></script>
   </body>
 </html>

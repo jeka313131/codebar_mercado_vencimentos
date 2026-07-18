@@ -4,6 +4,7 @@ import {
   updateProduct,
   uploadProductImage,
 } from "../api.js";
+import { startPhotoCapture } from "../photoCapture.js";
 import { isoToDateBrFull, maskDateBrInput, parseDateBrToIso } from "../utils/dates.js";
 import { escapeHtml } from "../utils/html.js";
 
@@ -28,8 +29,7 @@ export function openProductModal(product, { onUpdated, onDeleted } = {}) {
         <div class="field">
           <label for="modal-photo-preview">Foto</label>
           <img id="modal-photo-preview" class="photo-preview" src="${escapeHtml(product.imageUrl)}" alt="" />
-          <input id="modal-photo" type="file" accept="image/*" class="photo-input" />
-          <label for="modal-photo" class="btn btn-secondary btn--compact">Tirar / escolher foto</label>
+          <button type="button" class="btn btn-secondary btn--compact" id="modal-take-photo">Tirar foto</button>
         </div>
         <div class="field">
           <label for="modal-barcode">Código de barras</label>
@@ -81,7 +81,6 @@ export function openProductModal(product, { onUpdated, onDeleted } = {}) {
   const btnDelete = overlay.querySelector("#modal-delete");
   const expiryText = overlay.querySelector("#modal-expiry");
   const expiryNative = overlay.querySelector("#modal-expiry-native");
-  const photoInput = overlay.querySelector("#modal-photo");
   const photoPreview = overlay.querySelector("#modal-photo-preview");
 
   let selectedPhoto = null;
@@ -103,11 +102,13 @@ export function openProductModal(product, { onUpdated, onDeleted } = {}) {
     if (event.target === overlay) closeModal(overlay);
   });
 
-  photoInput.addEventListener("change", () => {
-    const file = photoInput.files?.[0];
-    if (!file) return;
-    selectedPhoto = file;
-    photoPreview.src = URL.createObjectURL(file);
+  overlay.querySelector("#modal-take-photo").addEventListener("click", () => {
+    startPhotoCapture({
+      onCapture: (file) => {
+        selectedPhoto = file;
+        photoPreview.src = URL.createObjectURL(file);
+      },
+    });
   });
 
   expiryText.addEventListener("input", () => {

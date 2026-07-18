@@ -3,6 +3,7 @@ import { registerSW } from "virtual:pwa-register";
 import { initAuthGuard } from "./auth/guard.js";
 import { initRouter, registerRoute } from "./router.js";
 import { initScanner } from "./scanner.js";
+import { initPhotoCapture } from "./photoCapture.js";
 import { initSidebar } from "./components/sidebar.js";
 import { renderHome } from "./pages/home.js";
 import { renderStock } from "./pages/stock.js";
@@ -23,6 +24,7 @@ registerRoute("/grupo-alerta", renderAlertGroup);
 registerRoute("/perfil", renderProfile);
 
 initScanner();
+initPhotoCapture();
 initSidebar();
 initRouter();
 initAuthGuard();
