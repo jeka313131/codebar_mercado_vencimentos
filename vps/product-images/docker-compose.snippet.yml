@@ -1,0 +1,41 @@
+# Cole este serviço no docker-compose.yml da VPS (/opt/evolution-api/docker-compose.yml)
+# e adicione as priorities na evolution-api (veja README.md).
+#
+# Antes:
+#   mkdir -p /var/www/product-images
+#   # defina UPLOAD_TOKEN forte
+#
+# Depois:
+#   docker compose up -d --build product-images
+#   docker compose up -d traefik evolution-api
+
+  product-images:
+    build: ./product-images
+    # Se o código estiver só no GitHub, copie a pasta vps/product-images para /opt/evolution-api/product-images
+    # e use: build: ./product-images
+    container_name: product-images
+    restart: unless-stopped
+    environment:
+      UPLOAD_TOKEN: "TROQUE_POR_UM_TOKEN_FORTE"
+      PUBLIC_BASE_URL: "https://143.95.210.104/product-images"
+      DATA_DIR: /data
+    volumes:
+      - /var/www/product-images:/data
+    networks:
+      - network_public
+    labels:
+      - "traefik.enable=true"
+      - "traefik.docker.network=network_public"
+
+      - "traefik.http.routers.product-images.rule=Host(`143.95.210.104`) && PathPrefix(`/product-images`)"
+      - "traefik.http.routers.product-images.entrypoints=websecure"
+      - "traefik.http.routers.product-images.tls=true"
+      - "traefik.http.routers.product-images.priority=100"
+      - "traefik.http.routers.product-images.middlewares=product-images-strip@docker"
+      - "traefik.http.middlewares.product-images-strip.stripprefix.prefixes=/product-images"
+      - "traefik.http.services.product-images.loadbalancer.server.port=8080"
+
+      - "traefik.http.routers.product-images-http.rule=Host(`143.95.210.104`) && PathPrefix(`/product-images`)"
+      - "traefik.http.routers.product-images-http.entrypoints=web"
+      - "traefik.http.routers.product-images-http.middlewares=redirect-to-https@docker,product-images-strip@docker"
+      - "traefik.http.routers.product-images-http.priority=100"

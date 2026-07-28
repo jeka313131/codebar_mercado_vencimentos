@@ -1,6 +1,7 @@
 import { mapProduct, supabase } from "./supabase.js";
 import { addDaysToIso, getBrasiliaNow } from "./timezone.js";
 import { compressProductImage } from "./imageCompress.js";
+import { isVpsImageStorageConfigured, uploadImageToVps } from "./vpsImageStorage.js";
 
 const PRODUCT_COLUMNS =
   "id, barcode, name, expiry_date, quantity, image_url, created_at, user_id";
@@ -111,9 +112,13 @@ export async function removeProduct(userId, id) {
 
 export async function uploadProductImage(userId, buffer) {
   const compressed = await compressProductImage(buffer);
-  const fileName = `${userId}/${crypto.randomUUID()}.jpg`;
+  const relativePath = `${userId}/${crypto.randomUUID()}.jpg`;
 
-  const { error } = await supabase.storage.from("product-images").upload(fileName, compressed.buffer, {
+  if (isVpsImageStorageConfigured()) {
+    return uploadImageToVps(relativePath, compressed.buffer);
+  }
+
+  const { error } = await supabase.storage.from("product-images").upload(relativePath, compressed.buffer, {
     cacheControl: "3600",
     upsert: false,
     contentType: "image/jpeg",
@@ -121,6 +126,6 @@ export async function uploadProductImage(userId, buffer) {
 
   if (error) throw new Error(error.message);
 
-  const { data } = supabase.storage.from("product-images").getPublicUrl(fileName);
+  const { data } = supabase.storage.from("product-images").getPublicUrl(relativePath);
   return data.publicUrl;
 }
